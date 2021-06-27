@@ -1,3 +1,5 @@
 node_modules/
+functions/lib/
+functions/node_modules/
 boto-app-840d4c8db402.json
 database.rules.json
