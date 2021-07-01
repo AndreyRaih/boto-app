@@ -13,7 +13,7 @@ router.post('/bot/:id', async (req, res, next) => {
   const reciever = new BotData(id, actionManager);
   
   try {
-    await reciever.run();
+    await reciever.run(req.body);
     reciever.handleUpdates(req, res);
     res.sendStatus(200);
   } catch (error) {

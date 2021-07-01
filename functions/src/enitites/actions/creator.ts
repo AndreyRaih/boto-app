@@ -21,11 +21,44 @@ export default class ActionsCreator {
       actions: [
         {
           id: "1",
-          stages: []
+          stages: [
+            {
+              type: 'LISTENER',
+              listenerEvent: 'message',
+              handlerDef: {
+                type: 'REPLY',
+                replyText: 'reply listener works fine from action 1!'
+              }
+            },
+            {
+              type: 'COMMAND',
+              commandName: '/checkactionstep',
+              handlerDef: {
+                type: 'REPLY',
+                replyText: 'reply listener works fine from action 1!'
+              }
+            }
+          ]
         },
         {
           id: "2",
-          stages: []
+          stages: [
+            {
+              type: 'LISTENER',
+              listenerEvent: 'message',
+              handlerDef: {
+                type: 'REPLY',
+                replyText: 'reply listener works fine from action 2!'
+              }
+            },
+            {
+              type: 'COMMAND',
+              commandName: '/checkactionwizard',
+              handlerDef: {
+                type: 'WIZARD'
+              }
+            }
+          ]
         }
       ],
       actionsMap: {},

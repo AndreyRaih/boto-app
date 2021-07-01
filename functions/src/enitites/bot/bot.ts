@@ -1,49 +1,41 @@
 import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
-import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
+import { Bot } from "../../types/bot";
 
-export default class BotData {
+export default class BotData implements Bot.IBot {
   id: string;
-  actionManager: BotActions.IDispatcher;
-  bot: Telegraf | null = null;
+  actionDispatcher: BotActions.IDispatcher;
+  botInstance: Telegraf | null = null;
 
-  constructor(id: string, actionManager: BotActions.IDispatcher) {
-    if (!id) throw new Error(
+  constructor(id: string, dispatcher: BotActions.IDispatcher) {
+    if (!id || !dispatcher) throw new Error(
       "Bot cannot be initialized without [id] and [actionManager] fields"
     );
     
     this.id = id;
-    this.actionManager = actionManager;
+    this.actionDispatcher = dispatcher;
   }
 
-  async run(): Promise<void> {
-    // Restore bot data
+  async run(ctx: any): Promise<void> {
+    // 1. Restore bot data
     const { token } = await this._restoreBotDataById();
     if (!token) throw new Error("Bot doesnt exist");
 
-    // Initialize bot
-    this.bot = new Telegraf(token as string, {
+    // 2. Initialize bot
+    this.botInstance = new Telegraf(token as string, {
       telegram: { webhookReply: true },
     })
 
-    // initialize error handling
-    this.bot.catch((err, ctx) => {
-      console.log('[Bot] Error', err)
-      ctx.reply(`Ooops, encountered an error for ${ctx.updateType}`, err as ExtraReplyMessage)
-    })
-
-    // initialize the actions flow
-    await this.actionManager.initialize();
-    
-    this.bot.command('/start', (ctx) => this.actionManager.start(ctx))
-    this.bot.on('message', (ctx) => this.actionManager.handle(ctx))
+    // 3. Initialize the actions by chatId
+    const { id } = ctx.message.chat;
+    await this.actionDispatcher.initialize(this.botInstance, id);
   };
 
-  async handleUpdates(request: any, response: any) {
-    if (!this.bot) throw new Error("Bot is uninstall");
+  async handleUpdates(request: any, response: any): Promise<void> {
+    if (!this.botInstance) throw new Error("Bot is uninstall");
     console.log('Incoming message', request.body)
-    return await this.bot.handleUpdate(request.body, response);
+    return await this.botInstance.handleUpdate(request.body, response);
   }
 
   private async _restoreBotDataById(): Promise<any> {
