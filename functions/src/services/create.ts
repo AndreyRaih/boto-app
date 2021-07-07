@@ -21,8 +21,8 @@ router.post('/bot', async (req, res, next) => {
 });
 
 router.post('/action', async (req, res, next) => {
-  const { botId } = req.body;
-  const creator = new ActionsCreator(botId);
+  const { botId, action } = req.body;
+  const creator = new ActionsCreator(botId, action);
 
   try {
     await creator.createAction();

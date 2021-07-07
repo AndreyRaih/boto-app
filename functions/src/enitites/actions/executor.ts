@@ -1,4 +1,6 @@
-import { Telegraf } from "telegraf";
+import { Context, Markup, Telegraf } from "telegraf";
+import { InlineKeyboardButton, KeyboardButton } from "telegraf/typings/core/types/typegram";
+import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
 
 export default class BotActionExecutor implements BotActions.IExecutor {
@@ -10,52 +12,43 @@ export default class BotActionExecutor implements BotActions.IExecutor {
         this.action = action;
     };
 
-    execute() {
-        if (!this.action?.stages) throw new Error("[action.stages] is required");
+    execute(currentStep: number = 0): Promise<{ id: string, step: number }> {
+        return new Promise((resolve, reject) => {
+            if (!this.action?.stages) throw reject(new Error("[action.stages] is required"));
 
-        for (const stage of this.action.stages) {
-            this._addStageToBot(stage);
-        }
+            const hasAction: boolean = Boolean(this.action?.stages[currentStep]);
+            if (!hasAction) currentStep = 0;
+
+            const action = this.action.stages[currentStep]
+
+            this.bot.on("message", (ctx: any) => {
+                this._handleReply(action as BotActions.Reply, ctx);
+                resolve({ 
+                    id: ctx.message.chat.id.toString(),
+                    step: currentStep + 1
+                })
+            })
+        });
     }
 
-    private _addStageToBot(stage: BotActions.Stage): void {
-        switch (stage.type) {
-            case 'COMMAND':
-                console.log('set cmd from', stage)
-                this.bot.command(stage.commandName || '/', (ctx) => {
-                    console.log('here command', ctx)
-                    this._buildHandlerForStage(stage.handlerDef, ctx)
-                });
-                break;
-            case 'LISTENER':
-                console.log('set listener from', stage)
-                this.bot.on(stage.listenerEvent || 'text', (ctx) => {
-                    console.log('here listener', ctx)
-                    this._buildHandlerForStage(stage.handlerDef, ctx)
-                });
-                break;
-            default:
-                break;
-        }
+    private _handleReply(reply: BotActions.Reply, ctx: Context) {
+        const keyboard = reply.keyboard ? this._handleInlineQuery(reply.keyboard) : {};
+        if (reply.picture) {
+            const extra = {
+                ...keyboard,
+                caption: reply.text
+            }
+            ctx.replyWithPhoto(reply.picture, extra)
+        } else {
+            ctx.reply(reply.text, keyboard);  
+        }; 
     }
 
-    private _buildHandlerForStage(definition: BotActions.Stage.HandlerDefinition, ctx: any) {
-        console.log('set def from', definition)
-        switch (definition.type) {
-            case 'REPLY':
-                if (!definition.replyText) throw new Error("Action should contain the reply message");
-                
-                return ctx.telegram.sendMessage(ctx.chat.id, definition.replyText);
-            case 'WIZARD':
-                if (!definition.wizard) throw new Error("Action should have wizard definition");
-
-                return this._buildWizardForHandlerDef(definition.wizard, ctx);
-            default:
-                break;
+    private _handleInlineQuery(keyboardConfig: BotActions.Reply.Keyboard): ExtraReplyMessage {
+        if (keyboardConfig.isInline) {
+            return Markup.inlineKeyboard([ keyboardConfig.buttons as InlineKeyboardButton[] ]);
+        } else {
+            return Markup.keyboard([ keyboardConfig.buttons as KeyboardButton[] ]);
         }
-    }
-
-    private _buildWizardForHandlerDef(wizardDef: BotActions.Stage.Wizard, ctx: any) {
-        return ctx.telegram.sendMessage(ctx.chat.id, 'here will be wizard');
     }
 }

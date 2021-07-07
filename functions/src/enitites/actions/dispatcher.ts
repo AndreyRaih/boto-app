@@ -3,12 +3,13 @@ import { Telegraf } from "telegraf";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
 import BotActionExecutor from "./executor";
+import { actionCoverter } from "./utils/converter";
 
 export default class BotActionDispatcher implements BotActions.IDispatcher {
   id: string;
   chatId: string | null = null;
   bot: Telegraf | null = null;
-  instance: BotActions.Manager | null = null;
+  instance: BotActions.Manager | null | undefined = null;
   executor: BotActions.IExecutor | null = null;
 
   constructor(id: string) {
@@ -30,14 +31,14 @@ export default class BotActionDispatcher implements BotActions.IDispatcher {
     return action ? { ...action } : null;
   }
 
-  get nextActionIndex(): number {
-    if (!this.instance) return 0;
-    return this.instance.lastActionIndex + 1 < (this.instance?.actions.length as number) ? this.instance.lastActionIndex + 1 : 0;
-  }
-
   async initialize(bot: Telegraf, chatId: string): Promise<void> {
     // 1. Define instance
-    this.instance = await admin.firestore().collection('actions').doc(this.id).get().then(data => data.data() as BotActions.Manager);
+    this.instance = await admin.firestore()
+      .collection('actions')
+      .doc(this.id)
+      .withConverter(actionCoverter)
+      .get()
+      .then(data => data.data());
     
     // 2. Set chatId
     this.chatId = chatId;
@@ -56,7 +57,9 @@ export default class BotActionDispatcher implements BotActions.IDispatcher {
   }
 
   private async _initializeDefaultActions() {
-    this.bot?.command('/start', (ctx) => this._runNew(ctx.chat.id.toString()));
+    this.bot?.command('/start', (ctx) => 
+      this._runNew(ctx.chat.id.toString()).then(() => ctx.reply('Start message, describe allow commands'))
+    );
 
     this.bot?.catch((err, ctx) => {
       console.log('[Bot] Error', err)
@@ -69,31 +72,22 @@ export default class BotActionDispatcher implements BotActions.IDispatcher {
     if (!this.linkedAction) throw new Error("[linkedAction] should be defined");
     
     const linkedActionsExecutor = new BotActionExecutor(this.bot, this.linkedAction);
-    linkedActionsExecutor.execute();
+    linkedActionsExecutor.execute(this.actionRef?.step).then(async ({ id, step }) => {
+      await this.instance?.updateStepData(id, step);
+      this._updateActions();
+    });
   }
 
   async _runNew(chatId: string): Promise<void> {
-    await this._bindNewActionWithChatId(chatId);
-    this._updateActionsLastIndex();
+    await this.instance?.bindActionWithChatId(chatId);
+    this._updateActions();
   }
 
-  private _bindNewActionWithChatId(chatId: string): void {
-    if (!this.instance) throw new Error("[instance] cannot be empty");
-
-    const { id } = this.instance?.actions[this.nextActionIndex] as BotActions.Action;
-    if (!id) throw new Error("Cannot define new action");
-    
-    //@ts-ignore
-    this.instance?.actionsMap[chatId] = {
-      id,
-      step: 0
-    };
-  }
-
-  private _updateActionsLastIndex(): Promise<any> {
-    return admin.firestore().collection('actions').doc(this.id).update({
-      ...this.instance,
-      lastActionIndex: this.nextActionIndex
-    });
+  private _updateActions(): Promise<any> {
+    return admin.firestore()
+      .collection('actions')
+      .doc(this.id)
+      .withConverter(actionCoverter)
+      .set(this.instance, { merge: true });
   }
 }

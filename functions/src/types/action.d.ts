@@ -1,14 +1,13 @@
-import { namespace } from "firebase-functions/lib/providers/firestore"
 import { Telegraf } from "telegraf"
-import { WizardScene } from "telegraf/typings/scenes"
-import { UpdateType } from "telegraf/typings/telegram-types"
+import { InlineKeyboardButton, KeyboardButton } from "telegraf/typings/core/types/typegram"
 
 export declare namespace BotActions {
     type Manager = {
-        config?: any;
         lastActionIndex: number;
         actions: Action[];
         actionsMap: any;
+        bindActionWithChatId: (chatId: string) => void;
+        updateStepData: (chatId: string, step: number) => Promise<void>;
     }
 
     type ActionReference = {
@@ -18,33 +17,22 @@ export declare namespace BotActions {
 
     type Action = {
         id?: string | null | undefined;
-        stages: BotActions.Stage[] | undefined;
+        trigger: string;
+        savedData?: Object;
+        needToDeleteMessage?: boolean;
+        stages: BotActions.Reply[] | string | undefined;
     }
 
-    type Stage = {
-        type: Stage.Types;
-        listenerEvent?: UpdateType;
-        commandName?: string;
-        handlerDef: Stage.HandlerDefinition
+    type Reply = {
+        text: string,
+        picture?: string
+        keyboard?: Reply.Keyboard
     }
 
-    namespace Stage {
-        type Types = 'COMMAND' | 'LISTENER';
-
-        type HandlerType = 'WIZARD' | 'REPLY';
-
-        type WizardStep = {
-        }
-
-        type Wizard = { 
-            id: string,
-            steps: WizardStep
-        }
-
-        type HandlerDefinition = {
-            type: HandlerType;
-            replyText?: string | null;
-            wizard?: Wizard | null
+    namespace Reply {
+        type Keyboard = {
+            isInline: boolean;
+            buttons: KeyboardButton[] | InlineKeyboardButton[]
         }
     }
 
@@ -56,13 +44,12 @@ export declare namespace BotActions {
         executor: BotActions.IExecutor | null | undefined;
         actionRef: BotActions.ActionReference | null;
         linkedAction: BotActions.Action | null;
-        nextActionIndex: number;
         initialize: (bot: Telegraf, id: string) => Promise<void>;
     }
 
     interface IExecutor {
         bot: Telegraf;
         action: BotActions.Action;
-        execute: (action: BotActions.Action | null) => void;
+        execute: (step: number) => Promise<{ id: string, step: number }>;
     }
 }
