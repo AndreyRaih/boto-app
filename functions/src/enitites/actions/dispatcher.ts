@@ -2,33 +2,26 @@ import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
+import { BotInteraction } from "../../types/interaction";
 import BotActionExecutor from "./executor";
-import { actionCoverter } from "./utils/converter";
+import { actionCoverter } from "../../utils/converter";
 
-export default class BotActionDispatcher implements BotActions.IDispatcher {
+export default class BotActionDispatcher implements BotInteraction.IDispatcher {
   id: string;
   chatId: string | null = null;
   bot: Telegraf | null = null;
-  instance: BotActions.Manager | null | undefined = null;
-  executor: BotActions.IExecutor | null = null;
+  instance: BotInteraction.IManager | null | undefined = null;
+  executor: BotInteraction.IExecutor | null = null;
 
   constructor(id: string) {
     if (!id) throw new Error("[id] is required");
     this.id = id;
   }
 
-  get actionRef(): BotActions.ActionReference | null {
+  get actionProgress(): BotActions.Progress | null {
     if (!this.chatId || !this.instance) return null;
 
-    return this.instance.actionsMap[this.chatId] || null;
-  }
-
-  get linkedAction(): BotActions.Action | null {
-    if (!this.actionRef) throw new Error("[actionRef] should be defined");
-    if (!this.instance) throw new Error("[instance] should be defined");
-
-    const action = this.instance?.actions.find(({ id }) => id === this.actionRef?.id);
-    return action ? { ...action } : null;
+    return this.instance.actionsProgressMap[this.chatId] || null;
   }
 
   async initialize(bot: Telegraf, chatId: string): Promise<void> {
@@ -42,23 +35,23 @@ export default class BotActionDispatcher implements BotActions.IDispatcher {
     
     // 2. Set chatId
     this.chatId = chatId;
-    if (!this.actionRef) {
-      this._runNew(this.chatId);
-    }
 
     // 3. Linked bot
     this.bot = bot;
+
+    // 4. Set the executor
+    
 
     // 4. Set default actions
     await this._initializeDefaultActions();
 
     // 5. Set linked actions
-    await this._initializeLinkedActions();
+    await this._initializeActions();
   }
 
   private async _initializeDefaultActions() {
-    this.bot?.command('/start', (ctx) => 
-      this._runNew(ctx.chat.id.toString()).then(() => ctx.reply('Start message, describe allow commands'))
+    this.bot?.start((ctx) => 
+      ctx.reply('Start message, describe allow commands')
     );
 
     this.bot?.catch((err, ctx) => {
@@ -67,23 +60,20 @@ export default class BotActionDispatcher implements BotActions.IDispatcher {
     })
   }
 
-  private async _initializeLinkedActions() {
+  private async _initializeActions() {
     if (!this.bot) throw new Error("[bot] should be defined");
-    if (!this.linkedAction) throw new Error("[linkedAction] should be defined");
-    
-    const linkedActionsExecutor = new BotActionExecutor(this.bot, this.linkedAction);
-    linkedActionsExecutor.execute(this.actionRef?.step).then(async ({ id, step }) => {
-      await this.instance?.updateStepData(id, step);
-      this._updateActions();
+    if (!this.instance) throw new Error("[instance] should be defined");
+
+    const linkedActionsExecutor = new BotActionExecutor(this.bot, this.instance.actions, this.actionProgress);
+
+    linkedActionsExecutor.execute().then(updates => {
+      console.log(updates)
+      updates && this._updateActions(updates)
     });
   }
 
-  async _runNew(chatId: string): Promise<void> {
-    await this.instance?.bindActionWithChatId(chatId);
-    this._updateActions();
-  }
-
-  private _updateActions(): Promise<any> {
+  private async _updateActions(updates: Partial<BotActions.Progress.Update>): Promise<any> {
+    await this.instance?.updateActionProgressData(this.chatId, updates);
     return admin.firestore()
       .collection('actions')
       .doc(this.id)

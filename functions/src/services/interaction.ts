@@ -1,15 +1,13 @@
 import * as express from 'express';
-import BotData from '../enitites/bot/bot';
+import BotData from '../enitites/bot';
 import BotActionDispatcher from '../enitites/actions/dispatcher';
-import { BotActions } from '../types/action';
-// import BotCache from '../enitites/cache';
+import { BotInteraction } from '../types/interaction';
 
 const router = express.Router();
-// const cache = new BotCache();
 
 router.post('/bot/:id', async (req, res, next) => {
   const { id } = req.params;
-  const actionManager: BotActions.IDispatcher = new BotActionDispatcher(id);
+  const actionManager: BotInteraction.IDispatcher = new BotActionDispatcher(id);
   const reciever = new BotData(id, actionManager);
   
   try {

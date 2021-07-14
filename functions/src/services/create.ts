@@ -1,6 +1,6 @@
 import * as express from 'express';
-import ActionsCreator from '../enitites/actions/creator';
-import BotCreator from '../enitites/bot/creator';
+import ActionsCreator from '../enitites/creators/action';
+import BotCreator from '../enitites/creators/bot';
 
 const router = express.Router();
 

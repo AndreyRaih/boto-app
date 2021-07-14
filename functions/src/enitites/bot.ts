@@ -1,14 +1,14 @@
 import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
-import { BotActions } from "../../types/action";
-import { Bot } from "../../types/bot";
+import { BotInteraction } from "../types/interaction";
+import { Bot } from "../types/bot";
 
 export default class BotData implements Bot.IBot {
   id: string;
-  actionDispatcher: BotActions.IDispatcher;
+  actionDispatcher: BotInteraction.IDispatcher;
   botInstance: Telegraf | null = null;
 
-  constructor(id: string, dispatcher: BotActions.IDispatcher) {
+  constructor(id: string, dispatcher: BotInteraction.IDispatcher) {
     if (!id || !dispatcher) throw new Error(
       "Bot cannot be initialized without [id] and [actionManager] fields"
     );
@@ -28,8 +28,8 @@ export default class BotData implements Bot.IBot {
     })
 
     // 3. Initialize the actions by chatId
-    const { id } = ctx.message.chat;
-    await this.actionDispatcher.initialize(this.botInstance, id);
+    const { chat } = ctx.message || ctx.callback_query.message;
+    await this.actionDispatcher.initialize(this.botInstance, chat.id);
   };
 
   async handleUpdates(request: any, response: any): Promise<void> {

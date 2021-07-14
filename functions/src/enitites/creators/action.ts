@@ -1,63 +1,65 @@
 import * as admin from "firebase-admin";
 import { BotActions } from "../../types/action";
-import { actionCoverter } from "./utils/converter";
-import BotActionManager from "./manager";
+import { actionCoverter } from "../../utils/converter";
+import BotActionManager from "../actions/manager";
+import { BotInteraction } from "../../types/interaction";
 
 const DEFAULT_ACTIONS_LIST: BotActions.Action[] = [
   {
-    id: "1",
     trigger: '/action_one',
+    greetingMessage: 'begin of action none',
     stages: [
       {
-        text: 'Reply from actions 1 trigger'
+        text: 'Reply 1 from test input action',
+        type: "INPUT",
+        step: 0,
+        description: 'Test input'
       },
       {
-        text: 'Reply from actions 1 command',
+        text: 'Reply 2 from test action form with picture and keyboard',
+        type: 'SELECT',
+        step: 1,
         picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
-        keyboard: {
-          isInline: true,
-          buttons: [
-            {
-              text: 'button one',
-              callback_data: 'test 1'
-            },
-            {
-              text: 'button two',
-              callback_data: 'test 2'
-            }
-          ]
-        }
+        optionsAppearance: 'KEYBOARD',
+        options: [
+          {
+            text: 'Button one',
+            value: 'test1'
+          },
+          {
+            text: 'Button two',
+            value: 'test2'
+          }
+        ]
       }
     ]
   },
   {
-    id: "2",
     trigger: '/action_two',
     stages: [
       {
-        text: 'Reply from actions 2 trigger'
-      },
-      {
-        text: 'Reply from actions 2 trigger',
-        keyboard: {
-          isInline: true,
-          buttons: [
-            {
-              text: 'button one',
-              callback_data: 'test 1'
-            },
-            {
-              text: 'button two',
-              callback_data: 'test 2'
-            }
-          ]
-        }
+        text: 'Reply 1 from test action form with picture and keyboard',
+        type: 'SELECT',
+        step: 1,
+        picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
+        optionsAppearance: 'BUTTON',
+        description: 'test select',
+        options: [
+          {
+            text: 'Button one',
+            value: 'test1'
+          },
+          {
+            text: 'Button two',
+            value: 'test2'
+          }
+        ]
       }
     ]
   }
 ]
 
-const DEFAULT_ACTION_MANAGER: BotActions.Manager = new BotActionManager(DEFAULT_ACTIONS_LIST);
+const DEFAULT_ACTION_MANAGER: BotInteraction.IManager = new BotActionManager(DEFAULT_ACTIONS_LIST);
 
 export default class ActionsCreator {
   id: string;
@@ -79,7 +81,7 @@ export default class ActionsCreator {
     let existManager = await this._getExistDataById(this.id);
     if (!existManager) existManager = DEFAULT_ACTION_MANAGER;
 
-    const patchedManager: BotActions.Manager = {
+    const patchedManager: BotInteraction.IManager = {
       ...existManager,
       // actions: this._patchExistActions(existManager.actions, this.action)
     }
@@ -87,7 +89,7 @@ export default class ActionsCreator {
     return admin.firestore().collection('actions').doc(this.id).withConverter(actionCoverter).set(patchedManager, { merge: true });
   }
 
-  private _getExistDataById(id: string): Promise<BotActions.Manager | null | undefined>  {
+  private _getExistDataById(id: string): Promise<BotInteraction.IManager | null | undefined>  {
     return Promise.resolve(null); // admin.firestore().collection('actions').doc(id).withConverter(actionCoverter).get().then(data => data.data());
   }
 
@@ -95,8 +97,8 @@ export default class ActionsCreator {
   private _patchExistActions(actions: BotActions.Action[], newAction: BotActions.Action): BotActions.Action[] {
     const existActions = [...actions];
 
-    if (existActions.some(({ id }) => newAction?.id === id)) {
-      const pos = existActions.findIndex(({ id }) => newAction?.id === id);
+    if (existActions.some(({ trigger }) => newAction?.trigger === trigger)) {
+      const pos = existActions.findIndex(({ trigger }) => newAction?.trigger === trigger);
       existActions.splice(pos, 1, newAction);
       return existActions;
     }

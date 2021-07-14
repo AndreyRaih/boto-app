@@ -1,54 +1,73 @@
-import { Context, Markup, Telegraf } from "telegraf";
-import { InlineKeyboardButton, KeyboardButton } from "telegraf/typings/core/types/typegram";
-import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
+import { Telegraf } from "telegraf";
 import { BotActions } from "../../types/action";
+import { BotInteraction } from "../../types/interaction";
+import BotReplyBuilder from "./replyBuilder";
 
-export default class BotActionExecutor implements BotActions.IExecutor {
+export default class BotActionExecutor implements BotInteraction.IExecutor {
     bot: Telegraf;
-    action: BotActions.Action;
+    actions: BotActions.Action[];
+    progress: BotActions.Progress | null;
 
-    constructor(bot: Telegraf, action: BotActions.Action) {
+    constructor(bot: Telegraf, actions: BotActions.Action[] = [], progress: BotActions.Progress | null) {
         this.bot = bot;
-        this.action = action;
+        this.actions = actions;
+        this.progress = progress;
     };
 
-    execute(currentStep: number = 0): Promise<{ id: string, step: number }> {
-        return new Promise((resolve, reject) => {
-            if (!this.action?.stages) throw reject(new Error("[action.stages] is required"));
-
-            const hasAction: boolean = Boolean(this.action?.stages[currentStep]);
-            if (!hasAction) currentStep = 0;
-
-            const action = this.action.stages[currentStep]
-
-            this.bot.on("message", (ctx: any) => {
-                this._handleReply(action as BotActions.Reply, ctx);
-                resolve({ 
-                    id: ctx.message.chat.id.toString(),
-                    step: currentStep + 1
-                })
-            })
-        });
+    get currentAction(): BotActions.Action | null {
+        return this.actions.find(action => action.trigger === this.progress?.id) || null;
     }
 
-    private _handleReply(reply: BotActions.Reply, ctx: Context) {
-        const keyboard = reply.keyboard ? this._handleInlineQuery(reply.keyboard) : {};
-        if (reply.picture) {
-            const extra = {
-                ...keyboard,
-                caption: reply.text
-            }
-            ctx.replyWithPhoto(reply.picture, extra)
-        } else {
-            ctx.reply(reply.text, keyboard);  
-        }; 
-    }
+    get currentActionStage(): BotActions.Reply | null {
+        if (!this.currentAction || !this.progress?.data) return null;
 
-    private _handleInlineQuery(keyboardConfig: BotActions.Reply.Keyboard): ExtraReplyMessage {
-        if (keyboardConfig.isInline) {
-            return Markup.inlineKeyboard([ keyboardConfig.buttons as InlineKeyboardButton[] ]);
-        } else {
-            return Markup.keyboard([ keyboardConfig.buttons as KeyboardButton[] ]);
+        if (!Boolean(this.progress.data.length as number)) {
+            return (this.currentAction.stages as BotActions.Reply[])[0]
         }
+        const { step } = [...this.progress?.data].pop() as BotActions.Progress.Data;
+        return ((this.currentAction.stages as BotActions.Reply[]).find(stage => stage.step === step)) || null;
+    }
+
+    execute(): Promise<BotActions.Progress.Update>{
+        // 1. Define the trigger commands, each run new action
+
+        // 2.Define cases:
+        // a. Without progress - send the allow commands list
+        // b. With progress - define and handle current step
+
+        console.log(this.progress, this.currentAction, this.currentActionStage);
+        if (!this.progress) {
+            this._replyWithDefaultMsg()
+            return this._defineActionTriggers();
+        } else {
+            return this._replyWithActionStage();
+        }
+    }
+
+    private _defineActionTriggers(): Promise<BotActions.Progress.Update> {
+        const builder = new BotReplyBuilder(this.bot);
+        return Promise.race(
+            this.actions.map(action =>
+                builder.command(action).then(() => ({ id: action.trigger, data: null }))
+            )
+        )
+    }
+
+    private _replyWithDefaultMsg(): void {
+        setTimeout(() => new BotReplyBuilder(this.bot).default('List of commands:', this.actions.map(action => `${action.trigger} - description`)), 0);
+    }
+
+    private _replyWithActionStage(): Promise<BotActions.Progress.Update> {
+        if (!this.currentActionStage) throw new Error("[currentActionStage] should be defined");
+        
+        return new BotReplyBuilder(this.bot).stage(this.currentActionStage)
+            .then(data => {
+                if (!this.currentAction) throw new Error("[currentAction] should be defined");
+                return {
+                    id: this.currentAction.trigger,
+                    finish: this.currentActionStage?.step === (this.currentAction.stages?.length as number) - 1,
+                    data
+                }
+            });
     }
 }

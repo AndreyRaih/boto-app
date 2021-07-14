@@ -1,34 +1,27 @@
 import { BotActions } from "../../types/action";
+import { BotInteraction } from "../../types/interaction";
 
-export default class BotActionManager implements BotActions.Manager {
-    lastActionIndex: number = 0;
-    actionsMap: any = {};
+export default class BotActionManager implements BotInteraction.IManager {
+    actionsProgressMap: any = {};
     actions: BotActions.Action[] = [];
 
-    constructor(actions: BotActions.Action[] = [], map: any = {}, index: number = 0) {
+    constructor(actions: BotActions.Action[] = [], map: any = {}) {
         this.actions = actions;
-        this.actionsMap = map;
-        this.lastActionIndex = index;
+        this.actionsProgressMap = map;
     }
 
-    get nextActionIndex(): number {
-        return this.lastActionIndex + 1 < (this.actions.length as number) ? this.lastActionIndex + 1 : 0;
-    }
+    async updateActionProgressData(chatId: string | null, data: Partial<BotActions.Progress.Update>): Promise<void> {
+        if (!chatId) throw new Error("[chatId] should be defined");
+        const { id, finish, data: patched } = data;
 
-    bindActionWithChatId(chatId: string): void {
-        const { id } = this.actions[this.nextActionIndex] as BotActions.Action;
-        if (!id) throw new Error("Cannot define new action");
-    
-        this.actionsMap[chatId] = {
-          id,
-          step: 0
-        };
-        this.lastActionIndex = this.nextActionIndex;
-    }
-
-    async updateStepData(chatId: string, step: number): Promise<void> {
-        if (!this.actionsMap[chatId]) throw new Error("Cannot find actionReference with this chat id");
-        
-        this.actionsMap[chatId].step = step;
+        if (finish) {
+            delete this.actionsProgressMap[chatId];
+        } else {
+            if (!this.actionsProgressMap[chatId] || this.actionsProgressMap[chatId].id !== id) {
+                this.actionsProgressMap[chatId] = { id, data: patched ? [ patched ] : [] }; 
+            } else {
+                this.actionsProgressMap[chatId].data.push(patched);
+            }
+        }
     }
 }

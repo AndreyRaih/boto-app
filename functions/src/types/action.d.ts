@@ -1,55 +1,44 @@
-import { Telegraf } from "telegraf"
-import { InlineKeyboardButton, KeyboardButton } from "telegraf/typings/core/types/typegram"
-
 export declare namespace BotActions {
-    type Manager = {
-        lastActionIndex: number;
-        actions: Action[];
-        actionsMap: any;
-        bindActionWithChatId: (chatId: string) => void;
-        updateStepData: (chatId: string, step: number) => Promise<void>;
-    }
-
-    type ActionReference = {
-        id: string;
-        step: number;
-    }
-
     type Action = {
-        id?: string | null | undefined;
         trigger: string;
-        savedData?: Object;
-        needToDeleteMessage?: boolean;
-        stages: BotActions.Reply[] | string | undefined;
+        greetingMessage?: string;
+        stages: Reply[] | string | null | undefined;
     }
+
+    type OptionsAppearance = 'BUTTON' | 'KEYBOARD';
 
     type Reply = {
-        text: string,
-        picture?: string
-        keyboard?: Reply.Keyboard
+        text: string;
+        type: 'SELECT' | 'INPUT';
+        step: number;
+        picture?: string;
+        description?: string;
+        optionsAppearance?: OptionsAppearance;
+        deleteMessage?: boolean;
+        options?: Option[] | null | undefined
     }
 
-    namespace Reply {
-        type Keyboard = {
-            isInline: boolean;
-            buttons: KeyboardButton[] | InlineKeyboardButton[]
-        }
+    type Option = {
+        text: string;
+        value: string;
     }
 
-    interface IDispatcher {
+    type Progress = {
         id: string;
-        chatId: string | null;
-        bot: Telegraf | null;
-        instance: BotActions.Manager | null | undefined;
-        executor: BotActions.IExecutor | null | undefined;
-        actionRef: BotActions.ActionReference | null;
-        linkedAction: BotActions.Action | null;
-        initialize: (bot: Telegraf, id: string) => Promise<void>;
+        data: Progress.Data[] | undefined | null;
     }
 
-    interface IExecutor {
-        bot: Telegraf;
-        action: BotActions.Action;
-        execute: (step: number) => Promise<{ id: string, step: number }>;
+    namespace Progress {
+        type Update = {
+            id: string;
+            finish?: boolean;
+            data: Data | null
+        };
+        
+        type Data = {
+            step: number;
+            value: any[] | string | null | undefined;
+            description?: string;
+        }
     }
 }
