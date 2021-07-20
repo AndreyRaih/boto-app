@@ -18,8 +18,8 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     this.id = id;
   }
 
-  get actionProgress(): BotActions.Progress | null {
-    if (!this.chatId || !this.instance) return null;
+  get actionProgress(): BotActions.Progress | undefined {
+    if (!this.chatId || !this.instance) return;
 
     return this.instance.actionsProgressMap[this.chatId] || null;
   }
@@ -40,9 +40,9 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     this.bot = bot;
 
     // 4. Set the executor
+    this.executor = new BotActionExecutor(this.bot, this.chatId, this.instance?.actions);
     
-
-    // 4. Set default actions
+    // 5. Set default actions
     await this._initializeDefaultActions();
 
     // 5. Set linked actions
@@ -50,9 +50,12 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
   }
 
   private async _initializeDefaultActions() {
+    if (!this.executor) throw new Error("[executor] should be defined");
     this.bot?.start((ctx) => 
       ctx.reply('Start message, describe allow commands')
     );
+
+    this.executor.defineTriggers().then(this._updateActions.bind(this)).then(this._initializeActions.bind(this));
 
     this.bot?.catch((err, ctx) => {
       console.log('[Bot] Error', err)
@@ -63,16 +66,16 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
   private async _initializeActions() {
     if (!this.bot) throw new Error("[bot] should be defined");
     if (!this.instance) throw new Error("[instance] should be defined");
+    if (!this.chatId) throw new Error("[chatId] should be defined");
+    if (!this.executor) throw new Error("[executor] should be defined");
 
-    const linkedActionsExecutor = new BotActionExecutor(this.bot, this.instance.actions, this.actionProgress);
-
-    linkedActionsExecutor.execute().then(updates => {
-      console.log(updates)
-      updates && this._updateActions(updates)
-    });
+    this.executor.execute(this.actionProgress).then(this._updateActions.bind(this));
   }
 
-  private async _updateActions(updates: Partial<BotActions.Progress.Update>): Promise<any> {
+  private async _updateActions(updates: Partial<BotActions.Progress.Update> | void): Promise<any> {
+    console.log(updates, 'results')
+    if (!updates) return;
+    
     await this.instance?.updateActionProgressData(this.chatId, updates);
     return admin.firestore()
       .collection('actions')

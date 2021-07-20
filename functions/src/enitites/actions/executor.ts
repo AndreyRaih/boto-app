@@ -5,69 +5,51 @@ import BotReplyBuilder from "./replyBuilder";
 
 export default class BotActionExecutor implements BotInteraction.IExecutor {
     bot: Telegraf;
+    chatId: string;
     actions: BotActions.Action[];
-    progress: BotActions.Progress | null;
 
-    constructor(bot: Telegraf, actions: BotActions.Action[] = [], progress: BotActions.Progress | null) {
+    constructor(bot: Telegraf, chatId: string, actions: BotActions.Action[] = []) {
         this.bot = bot;
+        this.chatId = chatId;
         this.actions = actions;
-        this.progress = progress;
     };
 
-    get currentAction(): BotActions.Action | null {
-        return this.actions.find(action => action.trigger === this.progress?.id) || null;
-    }
-
-    get currentActionStage(): BotActions.Reply | null {
-        if (!this.currentAction || !this.progress?.data) return null;
-
-        if (!Boolean(this.progress.data.length as number)) {
-            return (this.currentAction.stages as BotActions.Reply[])[0]
-        }
-        const { step } = [...this.progress?.data].pop() as BotActions.Progress.Data;
-        return ((this.currentAction.stages as BotActions.Reply[]).find(stage => stage.step === step)) || null;
-    }
-
-    execute(): Promise<BotActions.Progress.Update>{
-        // 1. Define the trigger commands, each run new action
-
-        // 2.Define cases:
-        // a. Without progress - send the allow commands list
-        // b. With progress - define and handle current step
-
-        console.log(this.progress, this.currentAction, this.currentActionStage);
-        if (!this.progress) {
-            this._replyWithDefaultMsg()
-            return this._defineActionTriggers();
-        } else {
-            return this._replyWithActionStage();
-        }
-    }
-
-    private _defineActionTriggers(): Promise<BotActions.Progress.Update> {
+    async defineTriggers(): Promise<BotActions.Progress.Update> {
         const builder = new BotReplyBuilder(this.bot);
         return Promise.race(
             this.actions.map(action =>
-                builder.command(action).then(() => ({ id: action.trigger, data: null }))
+                builder.command(action)
+                    .then(() => ({
+                        id: action.trigger,
+                        type: action.type,
+                        finish: false,
+                        data: null
+                    })))
             )
-        )
+    }
+
+    async execute(progress?: BotActions.Progress): Promise<BotActions.Progress.Update | void>{
+        if (!progress) return this._replyWithDefaultMsg();
+
+        const step: number = progress.data?.length || 0;
+        const action = this.actions.find(action => action.trigger === progress.id);
+        if (!action || !action.stages || !action.stages.length) throw new Error("[action] and [action.stages] shouldbe defined");
+        
+        const stage = action.stages[step] as BotActions.Reply;
+
+        console.log(progress, stage)
+
+        return await new BotReplyBuilder(this.bot).stage(this.chatId, stage, action.type)
+            .then(data => ({
+                id: action.trigger,
+                type: action.type,
+                finish: action.type === 'INPUT' ? data.step === (action.stages?.length as number) - 1 : true,
+                data
+            }));
     }
 
     private _replyWithDefaultMsg(): void {
-        setTimeout(() => new BotReplyBuilder(this.bot).default('List of commands:', this.actions.map(action => `${action.trigger} - description`)), 0);
-    }
-
-    private _replyWithActionStage(): Promise<BotActions.Progress.Update> {
-        if (!this.currentActionStage) throw new Error("[currentActionStage] should be defined");
-        
-        return new BotReplyBuilder(this.bot).stage(this.currentActionStage)
-            .then(data => {
-                if (!this.currentAction) throw new Error("[currentAction] should be defined");
-                return {
-                    id: this.currentAction.trigger,
-                    finish: this.currentActionStage?.step === (this.currentAction.stages?.length as number) - 1,
-                    data
-                }
-            });
+        setTimeout(() => new BotReplyBuilder(this.bot)
+            .default('List of commands:', this.actions.map(action => `${action.trigger} - description`)), 0);
     }
 }

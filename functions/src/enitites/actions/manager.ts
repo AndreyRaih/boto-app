@@ -18,9 +18,9 @@ export default class BotActionManager implements BotInteraction.IManager {
             delete this.actionsProgressMap[chatId];
         } else {
             if (!this.actionsProgressMap[chatId] || this.actionsProgressMap[chatId].id !== id) {
-                this.actionsProgressMap[chatId] = { id, data: patched ? [ patched ] : [] }; 
+                this.actionsProgressMap[chatId] = { id, data: Boolean(patched) ? [ patched ] : [] }; 
             } else {
-                this.actionsProgressMap[chatId].data.push(patched);
+                if (!this.actionsProgressMap[chatId].data.some((item: BotActions.Progress.Data) => item.step === patched?.step)) this.actionsProgressMap[chatId].data.push(patched);
             }
         }
     }

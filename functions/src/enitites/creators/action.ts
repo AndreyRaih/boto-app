@@ -7,28 +7,25 @@ import { BotInteraction } from "../../types/interaction";
 const DEFAULT_ACTIONS_LIST: BotActions.Action[] = [
   {
     trigger: '/action_one',
-    greetingMessage: 'begin of action none',
+    greetingMessage: 'begin of action 1',
+    type: 'INPUT',
     stages: [
       {
         text: 'Reply 1 from test input action',
-        type: "INPUT",
         step: 0,
-        description: 'Test input'
+        description: 'Test input 1'
       },
       {
         text: 'Reply 2 from test action form with picture and keyboard',
-        type: 'SELECT',
         step: 1,
         picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
-        optionsAppearance: 'KEYBOARD',
-        options: [
+        description: 'Test input 2',
+        tips: [
           {
-            text: 'Button one',
-            value: 'test1'
+            text: 'Tip one'
           },
           {
-            text: 'Button two',
-            value: 'test2'
+            text: 'Tip two'
           }
         ]
       }
@@ -36,27 +33,62 @@ const DEFAULT_ACTIONS_LIST: BotActions.Action[] = [
   },
   {
     trigger: '/action_two',
+    type: 'SELECT',
     stages: [
       {
         text: 'Reply 1 from test action form with picture and keyboard',
-        type: 'SELECT',
-        step: 1,
+        step: 0,
         picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
-        optionsAppearance: 'BUTTON',
         description: 'test select',
         options: [
           {
             text: 'Button one',
-            value: 'test1'
+            callback_data: 'test1'
           },
           {
             text: 'Button two',
-            value: 'test2'
+            callback_data: 'test2'
+          }
+        ]
+      },
+    ]
+  },
+  {
+    trigger: '/action_three',
+    greetingMessage: 'begin of action 3',
+    type: 'INPUT',
+    stages: [
+      {
+        text: 'Reply 1 from test input action',
+        step: 0,
+        description: 'Test input 1'
+      },
+      {
+        text: 'Reply 2 from test input action',
+        step: 1,
+        description: 'Test input 2'
+      },
+      {
+        text: 'Reply 3 from test input action',
+        step: 2,
+        description: 'Test input 3'
+      },
+      {
+        text: 'Reply 4 from test action form with picture and keyboard',
+        step: 3,
+        picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
+        description: 'Test select 4',
+        tips: [
+          {
+            text: 'Tip one'
+          },
+          {
+            text: 'Tip two'
           }
         ]
       }
     ]
-  }
+  },
 ]
 
 const DEFAULT_ACTION_MANAGER: BotInteraction.IManager = new BotActionManager(DEFAULT_ACTIONS_LIST);

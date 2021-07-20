@@ -14,15 +14,14 @@ export declare namespace BotInteraction {
         bot: Telegraf | null;
         instance: IManager | null | undefined;
         executor: IExecutor | null | undefined;
-        actionProgress: BotActions.Progress | null;
+        actionProgress: BotActions.Progress | undefined;
         initialize: (bot: Telegraf, id: string) => Promise<void>;
     }
 
     interface IExecutor {
         bot: Telegraf;
         actions: BotActions.Action[];
-        progress: BotActions.Progress | null;
-
-        execute: () => Promise<BotActions.Progress.Update | void>;
+        defineTriggers: () => Promise<BotActions.Progress.Update>;
+        execute: (progress?: BotActions.Progress) => Promise<BotActions.Progress.Update | void>;
     }
 }

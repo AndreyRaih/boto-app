@@ -1,5 +1,5 @@
 import { Context, Markup, Telegraf } from "telegraf";
-import { InlineKeyboardButton, KeyboardButton } from "telegraf/typings/core/types/typegram";
+import { InlineKeyboardButton } from "telegraf/typings/core/types/typegram";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
 
@@ -14,12 +14,9 @@ export default class BotReplyBuilder {
 
     command(action: BotActions.Action): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.bot.command(action.trigger, async (ctx: Context) => {
+            this.bot.command(action.trigger, (ctx: Context) => {
                 if (!action.stages?.length) throw reject(new Error("[action.stages] should be defined and contain at least one elem"));
-
                 if (action.greetingMessage) ctx.reply(action.greetingMessage);
-
-                this._handleReply((action.stages as BotActions.Reply[])[0], ctx);
                 resolve();
             })
         });
@@ -29,85 +26,72 @@ export default class BotReplyBuilder {
         this.bot.on("text", ctx => ctx.reply(`${message} ${commands}`));
     }
 
-    stage(action: BotActions.Reply): Promise<BotActions.Progress.Data> {
-        switch (action.type) {
+    async stage(chatId: string, action: BotActions.Reply, type: BotActions.Action.Type): Promise<BotActions.Progress.Data> {
+        this._sendNextStage(chatId, action);
+        
+        const value = await this._buildReplyByType(action, type);
+        return {
+            step: action.step,
+            description: action.description,
+            value
+        };
+    }
+
+    private _buildReplyByType(action: BotActions.Reply, type: BotActions.Action.Type): Promise<string> {
+        switch (type) {
             case "INPUT":
                 return this._buildInputAction(action);
             case "SELECT":
                 return this._buildSelectAction(action);
+            case "SUBSCRIBE":
+                return this._buildSubsribeAction(action);
             default:
-                throw new Error("action should be defined as FORM or SELECT");
+                throw new Error("action should be defined as FORM or SELECT or SUBSRIBE");
         }
     }
 
-    private  _buildInputAction(action: BotActions.Reply): Promise<BotActions.Progress.Data> {
-        return new Promise((resolve) => this.bot.on("message", (ctx: any) => {
-            this._handleReply(action as BotActions.Reply, ctx);
-            resolve({
-                step: action.step + 1,
-                value: ctx.message?.text
-            })
-        }));
+    private  _buildInputAction(action: BotActions.Reply): Promise<string> {
+        return new Promise((resolve) => this.bot.on("message", (ctx: any) => resolve(ctx.message?.text)));
     }
 
-    private _buildSelectAction(action: BotActions.Reply): Promise<BotActions.Progress.Data> {
+    private _buildSelectAction(action: BotActions.Reply): Promise<string> {
         return new Promise((resolve, reject) => {
             if (!action.options) throw reject(new Error("[action.options] should be defined and contain at least one elem"));
 
-            switch (action.optionsAppearance) {
-                case "BUTTON":
-                    this.bot.action(/.+/, async (ctx: any) => {
-                        await ctx.answerCbQuery(`Oh, ${ctx.match[0]}! Great choice`);
-                        resolve({
-                            step: action.step + 1,
-                            value: ctx.match[0]
-                        })
-                    })
-                    break;
-                case "KEYBOARD":
-                    action.options.forEach(option => this.bot.hears(option.text, async (ctx: any) => {
-                        ctx.reply(`Oh, ${ctx.message?.text}! Great choice`);
-                        resolve({
-                            step: action.step + 1,
-                            value: ctx.message?.text
-                        })
-                    }));
-                    break;
-                default:
-                    break;
-            }
-
-            this.bot.on("message", (ctx: Context) => this._handleReply(action as BotActions.Reply, ctx))
+            this.bot.action(/.+/, async (ctx: any) => {
+                await ctx.answerCbQuery(`Oh, ${ctx.match[0]}! Great choice`);
+                resolve(ctx.match[0])
+            });
         });
     }
 
-    private _handleReply(reply: BotActions.Reply, ctx: Context) {
+    private _buildSubsribeAction(action: BotActions.Reply): Promise<string> {
+        return Promise.resolve('');
+    }
+
+    private _sendNextStage(chatId: string, reply: BotActions.Reply) {
         if (!reply.text) throw new Error("[reply.text] should be defined");
         
-        const keyboard = Boolean(reply.options?.length) ? this._buildKeyboardByOptions(reply.options || [], reply.optionsAppearance) : {};
+        const inlineKeyboard = Boolean(reply.options?.length) ? this._buildKeyboardByList(reply.options as BotActions.Option[], true) : {};
+        const replyKeyboard = Boolean(reply.tips?.length) ? this._buildKeyboardByList(reply.tips as BotActions.Tip[]) : {};
+        const keyboard = Object.assign({}, inlineKeyboard, replyKeyboard);
+
         if (reply.picture) {
             const extra = {
                 ...keyboard,
                 caption: reply.text
             }
-            ctx.replyWithPhoto(reply.picture, extra)
+            this.bot.telegram.sendPhoto(chatId, reply.picture, extra)
         } else {
-            ctx.reply(reply.text, keyboard);
+            this.bot.telegram.sendMessage(chatId, reply.text, keyboard);
         };
     }
 
-    private _buildKeyboardByOptions(options: BotActions.Option[], appearance?: string): ExtraReplyMessage {
-        const buttons: InlineKeyboardButton[] | KeyboardButton[] = options.map(option => Object.assign({}, 
-            { text: option.text },
-            appearance === 'BUTTON' && { callback_data: option.value }
-        ))
-        switch (appearance) {
-            case "BUTTON":
-                return Markup.inlineKeyboard([buttons as InlineKeyboardButton[]]);
-            case "KEYBOARD":
-                return Markup.keyboard([buttons]).oneTime().resize();
-            default:
-                return Markup.inlineKeyboard([buttons as InlineKeyboardButton[]]);
+    private _buildKeyboardByList(options: BotActions.Option[] | BotActions.Tip[], isInline: boolean = false): ExtraReplyMessage {
+        if (isInline) {
+            return Markup.inlineKeyboard([options as InlineKeyboardButton[]]);
+        } else {
+            return Markup.keyboard([options]).oneTime().resize();
         }
     }
 }
