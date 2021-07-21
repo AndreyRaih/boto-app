@@ -9,7 +9,7 @@ export const actionCoverter = {
         let { actionsProgressMap, actions } = {...action as BotInteraction.IManager};
         actions = actions.map((item: BotActions.Action) => ({
           ...item,
-          stages: JSON.stringify(item.stages as BotActions.Reply[])
+          stages: JSON.stringify(item.stages as BotActions.Stage[])
         }));
         return {
           actionsProgressMap,

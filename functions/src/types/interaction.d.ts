@@ -21,7 +21,6 @@ export declare namespace BotInteraction {
     interface IExecutor {
         bot: Telegraf;
         actions: BotActions.Action[];
-        defineTriggers: () => Promise<BotActions.Progress.Update>;
         execute: (progress?: BotActions.Progress) => Promise<BotActions.Progress.Update | void>;
     }
 }

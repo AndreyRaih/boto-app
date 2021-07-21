@@ -2,7 +2,7 @@ import axios from "axios";
 import * as admin from "firebase-admin";
 // import { v4 as uuidv4 } from 'uuid';
 
-const API_INTERACTION_URL: string = 'https://f1a7dcea649b.ngrok.io/botoapp/us-central1/app/api/interaction/bot/'
+const API_INTERACTION_URL: string = 'https://efaf8edb7b33.ngrok.io/botoapp/us-central1/app/api/interaction/bot/'
 
 export default class BotCreator {
   token: string;
@@ -33,7 +33,10 @@ export default class BotCreator {
   private _setBotDataToDB(): Promise<any> {
     const data = {
       token: this.token,
-      name: this.name
+      name: this.name,
+      state: 'idle',
+      admins: [],
+      subscribers: []
     };
     return admin.firestore().collection('bots').doc(this.id).set(data);
   }

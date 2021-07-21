@@ -3,14 +3,14 @@ export declare namespace BotActions {
         trigger: string;
         type: Action.Type;
         greetingMessage?: string;
-        stages: Reply[] | string | null | undefined;
+        stages: Stage[] | string | null | undefined;
     }
 
     namespace Action {
         type Type = 'SELECT' | 'INPUT' | 'SUBSCRIBE';
     }
 
-    type Reply = {
+    type Stage = {
         text: string;
         step: number;
         description: string;
@@ -33,7 +33,6 @@ export declare namespace BotActions {
 
     type Progress = {
         id: string;
-        type: Action.Type;
         data: Progress.Data[] | undefined | null;
     }
 
@@ -45,9 +44,8 @@ export declare namespace BotActions {
         };
         
         type Data = {
-            step: number;
+            step?: number;
             value: string;
-            description: string;
         }
     }
 }

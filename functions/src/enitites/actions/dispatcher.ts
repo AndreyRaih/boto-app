@@ -42,20 +42,8 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     // 4. Set the executor
     this.executor = new BotActionExecutor(this.bot, this.chatId, this.instance?.actions);
     
-    // 5. Set default actions
-    await this._initializeDefaultActions();
-
-    // 5. Set linked actions
-    await this._initializeActions();
-  }
-
-  private async _initializeDefaultActions() {
-    if (!this.executor) throw new Error("[executor] should be defined");
-    this.bot?.start((ctx) => 
-      ctx.reply('Start message, describe allow commands')
-    );
-
-    this.executor.defineTriggers().then(this._updateActions.bind(this)).then(this._initializeActions.bind(this));
+    // 5. Set actions
+    this.executor.execute(this.actionProgress).then(this._updateActions.bind(this));
 
     this.bot?.catch((err, ctx) => {
       console.log('[Bot] Error', err)
@@ -63,17 +51,7 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     })
   }
 
-  private async _initializeActions() {
-    if (!this.bot) throw new Error("[bot] should be defined");
-    if (!this.instance) throw new Error("[instance] should be defined");
-    if (!this.chatId) throw new Error("[chatId] should be defined");
-    if (!this.executor) throw new Error("[executor] should be defined");
-
-    this.executor.execute(this.actionProgress).then(this._updateActions.bind(this));
-  }
-
   private async _updateActions(updates: Partial<BotActions.Progress.Update> | void): Promise<any> {
-    console.log(updates, 'results')
     if (!updates) return;
     
     await this.instance?.updateActionProgressData(this.chatId, updates);
