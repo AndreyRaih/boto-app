@@ -2,7 +2,9 @@ export declare namespace BotActions {
     type Action = {
         trigger: string;
         type: Action.Type;
-        greetingMessage?: string;
+        description: string;
+        nextAction?: string;
+        endMsg?: string;
         stages: Stage[] | string | null | undefined;
     }
 
@@ -31,6 +33,14 @@ export declare namespace BotActions {
         callback_data: string;
     }
 
+    type CommandDescriptionType = 'ACTION' | 'COMMAND';
+
+    type CommandDescription = {
+        type: CommandDescriptionType;
+        trigger?: string | null;
+        restart?: boolean;
+    }
+
     type Progress = {
         id: string;
         data: Progress.Data[] | undefined | null;
@@ -38,13 +48,17 @@ export declare namespace BotActions {
 
     namespace Progress {
         type Update = {
-            id: string;
+            id: string | null;
             finish: boolean;
+            restart?: boolean;
+            isCommand?: boolean;
+            next?: string;
             data: Data | null
         };
         
         type Data = {
             step?: number;
+            description: string;
             value: string;
         }
     }

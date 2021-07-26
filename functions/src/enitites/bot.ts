@@ -1,44 +1,64 @@
 import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
-import { BotInteraction } from "../types/interaction";
 import { Bot } from "../types/bot";
 
 export default class BotData implements Bot.IBot {
   id: string;
-  actionDispatcher: BotInteraction.IDispatcher;
-  botInstance: Telegraf | null = null;
+  name: string = '';
+  state: Bot.State = 'IDLE';
+  admins: string[] = [];
+  subscribers: string[] = [];
+  telegrafInstance: Telegraf | null = null;
 
-  constructor(id: string, dispatcher: BotInteraction.IDispatcher) {
-    if (!id || !dispatcher) throw new Error(
-      "Bot cannot be initialized without [id] and [actionManager] fields"
+  constructor(id: string) {
+    if (!id) throw new Error(
+      "Bot cannot be initialized without [id]"
     );
     
     this.id = id;
-    this.actionDispatcher = dispatcher;
   }
 
   async run(ctx: any): Promise<void> {
     // 1. Restore bot data
-    const { token } = await this._restoreBotDataById();
+    const { token,  name, admins, subscribers, state } = await this._restoreBotData();
     if (!token) throw new Error("Bot doesnt exist");
 
     // 2. Initialize bot
-    this.botInstance = new Telegraf(token as string, {
+    this.telegrafInstance = new Telegraf(token as string, {
       telegram: { webhookReply: true },
     })
-
-    // 3. Initialize the actions by chatId
-    const { chat } = ctx.message || ctx.callback_query.message;
-    await this.actionDispatcher.initialize(this.botInstance, chat.id);
+    this.admins = admins;
+    this.subscribers = subscribers;
+    this.state = state;
+    this.name = name;
   };
 
   async handleUpdates(request: any, response: any): Promise<void> {
-    if (!this.botInstance) throw new Error("Bot is uninstall");
+    if (!this.telegrafInstance) throw new Error("Bot is uninstall");
     console.log('Incoming message', request.body)
-    return await this.botInstance.handleUpdate(request.body, response);
+    return await this.telegrafInstance.handleUpdate(request.body, response);
   }
 
-  private async _restoreBotDataById(): Promise<any> {
+  async updateState(state: Bot.State) {
+    this.state = state;
+    admin.firestore().collection('bots').doc(this.id).update({ state });
+  };
+
+  async setAdmins(chatId: string) {
+    if (this.state !== "EDITED") throw new Error("[state] should be EDITED");
+    
+    const admins = [...this.admins, chatId];
+    this.admins = admins;
+    admin.firestore().collection('bots').doc(this.id).update({ admins });
+  };
+
+  async setSubscribers(chatId: string) {
+    const subscribers = [...this.subscribers, chatId];
+    this.subscribers = subscribers;
+    admin.firestore().collection('bots').doc(this.id).update({ subscribers });
+  };
+
+  private async _restoreBotData(): Promise<any> {
     return admin.firestore().collection('bots').doc(this.id).get().then(res => res.data());
   }
 }

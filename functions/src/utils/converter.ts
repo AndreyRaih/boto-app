@@ -26,4 +26,4 @@ export const actionCoverter = {
       }));
       return new BotActionManager(actions, actionsProgressMap);
     }
-  };
+};

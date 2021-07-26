@@ -7,8 +7,9 @@ import { BotInteraction } from "../../types/interaction";
 const DEFAULT_ACTIONS_LIST: BotActions.Action[] = [
   {
     trigger: '/action_one',
-    greetingMessage: 'begin of action 1',
+    description: 'Action 1',
     type: 'INPUT',
+    nextAction: '/action_two',
     stages: [
       {
         text: 'Reply 1 from test input action',
@@ -34,6 +35,7 @@ const DEFAULT_ACTIONS_LIST: BotActions.Action[] = [
   {
     trigger: '/action_two',
     type: 'SELECT',
+    description: 'Action 2',
     stages: [
       {
         text: 'Reply 1 from test action form with picture and keyboard',
@@ -55,7 +57,7 @@ const DEFAULT_ACTIONS_LIST: BotActions.Action[] = [
   },
   {
     trigger: '/action_three',
-    greetingMessage: 'begin of action 3',
+    description: 'Action 3',
     type: 'INPUT',
     stages: [
       {

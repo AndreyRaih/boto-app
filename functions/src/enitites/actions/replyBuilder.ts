@@ -2,8 +2,7 @@ import { Markup, Telegraf } from "telegraf";
 import { InlineKeyboardButton } from "telegraf/typings/core/types/typegram";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
-
-const DEFAULT_MESSAGE: string = 'Commands:';
+import { MESSAGES } from "../../utils/defaults";
 
 export default class BotReplyBuilder {
     bot: Telegraf
@@ -12,12 +11,17 @@ export default class BotReplyBuilder {
         this.bot = bot;
     }
 
-    default(chatId: string, message: string = DEFAULT_MESSAGE, commands: string[] = []): void {
-        this.bot.telegram.sendMessage(chatId, `${message} ${commands}`);
+    default(chatId: string, message: string = MESSAGES.DEFAULT_MSG, commands: string[] = []): void {
+        this.bot.telegram.sendMessage(chatId, `${message}:\n${commands.join('\n')}`);
     }
 
-    replyByChatId(chatId: string, reply: BotActions.Stage) {
+    replyByChatId(chatId: string, reply: BotActions.Stage | string) {
+        if (typeof reply === 'string') {
+            this.bot.telegram.sendMessage(chatId, reply);
+            return;
+        }
         if (!reply.text) throw new Error("[reply.text] should be defined");
+
         
         const inlineKeyboard = Boolean(reply.options?.length) ? this._buildKeyboardByList(reply.options as BotActions.Option[], true) : {};
         const replyKeyboard = Boolean(reply.tips?.length) ? this._buildKeyboardByList(reply.tips as BotActions.Tip[]) : {};

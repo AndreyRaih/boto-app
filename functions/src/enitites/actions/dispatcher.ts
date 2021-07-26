@@ -5,11 +5,13 @@ import { BotActions } from "../../types/action";
 import { BotInteraction } from "../../types/interaction";
 import BotActionExecutor from "./executor";
 import { actionCoverter } from "../../utils/converter";
+import { Bot } from "../../types/bot";
 
 export default class BotActionDispatcher implements BotInteraction.IDispatcher {
   id: string;
   chatId: string | null = null;
   bot: Telegraf | null = null;
+  botData: Bot.IBot | null = null;
   instance: BotInteraction.IManager | null | undefined = null;
   executor: BotInteraction.IExecutor | null = null;
 
@@ -24,7 +26,7 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     return this.instance.actionsProgressMap[this.chatId] || null;
   }
 
-  async initialize(bot: Telegraf, chatId: string): Promise<void> {
+  async initialize(bot: Bot.IBot, chatId: string): Promise<void> {
     // 1. Define instance
     this.instance = await admin.firestore()
       .collection('actions')
@@ -37,13 +39,18 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     this.chatId = chatId;
 
     // 3. Linked bot
-    this.bot = bot;
+    this.botData = bot;
+    this.bot = bot.telegrafInstance as Telegraf;
 
     // 4. Set the executor
-    this.executor = new BotActionExecutor(this.bot, this.chatId, this.instance?.actions);
+    this.executor = new BotActionExecutor(this.bot, this.botData, this.chatId, this.instance?.actions);
     
     // 5. Set actions
-    this.executor.execute(this.actionProgress).then(this._updateActions.bind(this));
+    if (this.botData.state === "SENDING_MESSAGE") {
+      this.executor.publishPost()
+    } else {
+      this.executor.executeAction(this.actionProgress).then(this._updateActions.bind(this));
+    }
 
     this.bot?.catch((err, ctx) => {
       console.log('[Bot] Error', err)
@@ -52,9 +59,25 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
   }
 
   private async _updateActions(updates: Partial<BotActions.Progress.Update> | void): Promise<any> {
-    if (!updates) return;
-    
+    if (!updates || updates.isCommand) {
+      if (updates && updates?.restart) this.instance?.deleteActionProgressData(this.chatId);
+      return this._updateInstance();
+    }
+
     await this.instance?.updateActionProgressData(this.chatId, updates);
+
+    if (updates.finish) {
+      this.executor?.finishAction(this.actionProgress as BotActions.Progress)
+      this.instance?.deleteActionProgressData(this.chatId);
+      if (updates.next) {
+        await this.instance?.updateActionProgressData(this.chatId, { id: updates.next, data: null});
+      }
+    }
+
+    return this._updateInstance();
+  }
+
+  private _updateInstance() {
     return admin.firestore()
       .collection('actions')
       .doc(this.id)
