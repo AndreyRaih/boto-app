@@ -1,19 +1,31 @@
 import { Telegraf } from "telegraf";
 
 export declare namespace Bot {
-    type State = 'IDLE' | 'EDITED' | 'SENDING_MESSAGE';
+    type ContactData = {
+        name?: string | null;
+        phone: string | null;
+        adress?: string | null;
+    }
+
+    type User = {
+        id: string;
+        isPaused?: boolean;
+        sendingMessageInProgress?: boolean;
+        registrationInProgress?: boolean;
+        contactData?: ContactData;
+    }
 
     interface IBot {
         id: string;
         telegrafInstance: Telegraf | null;
         name: string,
-        state: State,
-        admins: string[],
-        subscribers: string[],
+        admins: User[],
+        subscribers: User[],
         run: (ctx: any) => Promise<void>;
         handleUpdates: (req: any, res: any) => Promise<void>
-        updateState: (state: State) => Promise<void>
-        setAdmins: (chatId: string) => Promise<void>;
-        setSubscribers:(chatId: string) => Promise<void>;
+        setAdmin: (chatId: string) => Promise<void>;
+        setSubscriber:(chatId: string) => Promise<void>;
+        updateSubscriberData: (chatId: string, updates: Partial<Bot.User>) => Promise<void>;
+        updateAdminData: (chatId: string, updates: Partial<Bot.User>) => Promise<void>;
     }
 }

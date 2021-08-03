@@ -2,7 +2,7 @@ import axios from "axios";
 import * as admin from "firebase-admin";
 // import { v4 as uuidv4 } from 'uuid';
 
-const API_INTERACTION_URL: string = 'https://ad0d8828ff3b.ngrok.io/botoapp/us-central1/app/api/interaction/bot/'
+const API_INTERACTION_URL: string = 'https://298f55289fa7.ngrok.io/botoapp/us-central1/app/api/interaction/bot/'
 
 export default class BotCreator {
   token: string;

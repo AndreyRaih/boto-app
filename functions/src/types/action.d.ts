@@ -1,65 +1,57 @@
 export declare namespace BotActions {
+    type OfferType = 'PRODUCT' | 'SERVICE';
+
+    type ActionType = 'SELECT' | 'INPUT';
+
     type Action = {
         trigger: string;
-        type: Action.Type;
+        type: ActionType;
+        offerType: OfferType;
         description: string;
         nextAction?: string;
         endMsg?: string;
-        stages: Stage[] | string | null | undefined;
-    }
-
-    namespace Action {
-        type Type = 'SELECT' | 'INPUT' | 'SUBSCRIBE';
+        options: Stage[] | string | null | undefined;
     }
 
     type Stage = {
+        id: string;
         text: string;
-        step: number;
         description: string;
         picture?: string;
-        deleteMessage?: boolean;
         options?: Option[] | null | undefined;
-        tips?: Tip[] | null | undefined;
     }
 
-    type Tip = {
-        text: string;
+    type Option = Stage & {
+        parentId?: string;
     }
 
-    type Option = {
-        text: string;
-        isSub?: boolean;
-        children?: Option[] | null;
-        callback_data: string;
-    }
-
-    type CommandDescriptionType = 'ACTION' | 'COMMAND';
-
-    type CommandDescription = {
-        type: CommandDescriptionType;
-        trigger?: string | null;
+    type Update = {
+        isCommand?: boolean;
+        finish?: boolean;
         restart?: boolean;
+        next?: string;
+        data: Progress | null
     }
 
     type Progress = {
-        id: string;
-        data: Progress.Data[] | undefined | null;
+        id: string | null | undefined;
+        history: string[];
+        inputs?: Progress.Input[] | undefined | null;
+        select?: Progress.Select | undefined | null;
     }
 
     namespace Progress {
-        type Update = {
-            id: string | null;
-            finish: boolean;
-            restart?: boolean;
-            isCommand?: boolean;
-            next?: string;
-            data: Data | null
-        };
-        
         type Data = {
-            step?: number;
             description: string;
-            value: string;
+            value: string | null;
+        }
+
+        type Input = Data & {
+            step: number
+        }
+
+        type Select = Data & {
+            breadcrumbs: string[];
         }
     }
 }

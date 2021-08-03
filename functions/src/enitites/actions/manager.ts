@@ -10,14 +10,9 @@ export default class BotActionManager implements BotInteraction.IManager {
         this.actionsProgressMap = map;
     }
 
-    async updateActionProgressData(chatId: string | null, updates: Partial<BotActions.Progress.Update>): Promise<void> {
+    async updateActionProgressData(chatId: string | null, updates: Partial<BotActions.Progress>): Promise<void> {
         if (!chatId) throw new Error("[chatId] should be defined");
-        const { id, data } = updates;
-
-        this.actionsProgressMap[chatId] = {
-            id,
-            data: Boolean(data) ? [...(this.actionsProgressMap[chatId]?.data || []), data] : data
-        };
+        this.actionsProgressMap[chatId] = { ...this.actionsProgressMap[chatId], ...updates }
     }
 
     async deleteActionProgressData(chatId: string | null): Promise<void> {

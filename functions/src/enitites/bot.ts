@@ -5,9 +5,8 @@ import { Bot } from "../types/bot";
 export default class BotData implements Bot.IBot {
   id: string;
   name: string = '';
-  state: Bot.State = 'IDLE';
-  admins: string[] = [];
-  subscribers: string[] = [];
+  admins: Bot.User[] = [];
+  subscribers: Bot.User[] = [];
   telegrafInstance: Telegraf | null = null;
 
   constructor(id: string) {
@@ -18,9 +17,9 @@ export default class BotData implements Bot.IBot {
     this.id = id;
   }
 
-  async run(ctx: any): Promise<void> {
+  async run(): Promise<void> {
     // 1. Restore bot data
-    const { token,  name, admins, subscribers, state } = await this._restoreBotData();
+    const { token,  name, admins, subscribers } = await this._restoreBotData();
     if (!token) throw new Error("Bot doesnt exist");
 
     // 2. Initialize bot
@@ -29,7 +28,6 @@ export default class BotData implements Bot.IBot {
     })
     this.admins = admins;
     this.subscribers = subscribers;
-    this.state = state;
     this.name = name;
   };
 
@@ -39,24 +37,29 @@ export default class BotData implements Bot.IBot {
     return await this.telegrafInstance.handleUpdate(request.body, response);
   }
 
-  async updateState(state: Bot.State) {
-    this.state = state;
-    admin.firestore().collection('bots').doc(this.id).update({ state });
-  };
-
-  async setAdmins(chatId: string) {
-    if (this.state !== "EDITED") throw new Error("[state] should be EDITED");
-    
-    const admins = [...this.admins, chatId];
+  async setAdmin(id: string) {
+    const admins = Array.from(new Set([...this.admins, { id }]));
     this.admins = admins;
     admin.firestore().collection('bots').doc(this.id).update({ admins });
   };
 
-  async setSubscribers(chatId: string) {
-    const subscribers = [...this.subscribers, chatId];
+  async setSubscriber(id: string) {
+    const subscribers = Array.from(new Set([...this.admins, { id }]));
     this.subscribers = subscribers;
     admin.firestore().collection('bots').doc(this.id).update({ subscribers });
   };
+
+  async updateSubscriberData(id: string, updates: Partial<Bot.User>) {
+    const index = this.subscribers.findIndex(({ id: subscriberId }) => subscriberId === id);
+    this.subscribers[index] = { ...this.subscribers[index], ...updates };
+    admin.firestore().collection('bots').doc(this.id).update({ subscribers: this.subscribers });
+  }
+
+  async updateAdminData(id: string, updates: Partial<Bot.User>) {
+    const index = this.admins.findIndex(({ id: adminId }) => adminId === id);
+    this.admins[index] = { ...this.admins[index], ...updates };
+    admin.firestore().collection('bots').doc(this.id).update({ admins: this.admins });
+  } 
 
   private async _restoreBotData(): Promise<any> {
     return admin.firestore().collection('bots').doc(this.id).get().then(res => res.data());

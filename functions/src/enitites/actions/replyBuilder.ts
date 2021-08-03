@@ -1,8 +1,8 @@
+import { _onRequestWithOptions } from "firebase-functions/lib/providers/https";
 import { Markup, Telegraf } from "telegraf";
 import { InlineKeyboardButton } from "telegraf/typings/core/types/typegram";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
-import { MESSAGES } from "../../utils/defaults";
 
 export default class BotReplyBuilder {
     bot: Telegraf
@@ -11,11 +11,7 @@ export default class BotReplyBuilder {
         this.bot = bot;
     }
 
-    default(chatId: string, message: string = MESSAGES.DEFAULT_MSG, commands: string[] = []): void {
-        this.bot.telegram.sendMessage(chatId, `${message}:\n${commands.join('\n')}`);
-    }
-
-    replyByChatId(chatId: string, reply: BotActions.Stage | string) {
+    replyByChatId(chatId: string, reply: BotActions.Stage | BotActions.Option | string) {
         if (typeof reply === 'string') {
             this.bot.telegram.sendMessage(chatId, reply);
             return;
@@ -23,9 +19,7 @@ export default class BotReplyBuilder {
         if (!reply.text) throw new Error("[reply.text] should be defined");
 
         
-        const inlineKeyboard = Boolean(reply.options?.length) ? this._buildKeyboardByList(reply.options as BotActions.Option[], true) : {};
-        const replyKeyboard = Boolean(reply.tips?.length) ? this._buildKeyboardByList(reply.tips as BotActions.Tip[]) : {};
-        const keyboard = Object.assign({}, inlineKeyboard, replyKeyboard);
+        const keyboard = Boolean(reply.options?.length) ? this._buildKeyboardByList(reply.options as BotActions.Option[]) : Markup.inlineKeyboard([{ text: 'Написать продавцу', callback_data: `selected ${reply.id}`}]);
 
         if (reply.picture) {
             const extra = {
@@ -38,11 +32,11 @@ export default class BotReplyBuilder {
         };
     }
 
-    private _buildKeyboardByList(options: BotActions.Option[] | BotActions.Tip[], isInline: boolean = false): ExtraReplyMessage {
-        if (isInline) {
-            return Markup.inlineKeyboard([options as InlineKeyboardButton[]]);
-        } else {
-            return Markup.keyboard([options]).oneTime().resize();
-        }
+    private _buildKeyboardByList(options: BotActions.Option[]): ExtraReplyMessage {
+        const buttons: InlineKeyboardButton[] = options.map(option => ({
+            text: option.text,
+            callback_data: option.id
+        }));
+        return Markup.inlineKeyboard([buttons]);
     }
 }

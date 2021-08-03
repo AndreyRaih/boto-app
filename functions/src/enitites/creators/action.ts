@@ -3,97 +3,11 @@ import { BotActions } from "../../types/action";
 import { actionCoverter } from "../../utils/converter";
 import BotActionManager from "../actions/manager";
 import { BotInteraction } from "../../types/interaction";
+import { ACTIONS } from "../../utils/defaults";
 
-const DEFAULT_ACTIONS_LIST: BotActions.Action[] = [
-  {
-    trigger: '/action_one',
-    description: 'Action 1',
-    type: 'INPUT',
-    nextAction: '/action_two',
-    stages: [
-      {
-        text: 'Reply 1 from test input action',
-        step: 0,
-        description: 'Test input 1'
-      },
-      {
-        text: 'Reply 2 from test action form with picture and keyboard',
-        step: 1,
-        picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
-        description: 'Test input 2',
-        tips: [
-          {
-            text: 'Tip one'
-          },
-          {
-            text: 'Tip two'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    trigger: '/action_two',
-    type: 'SELECT',
-    description: 'Action 2',
-    stages: [
-      {
-        text: 'Reply 1 from test action form with picture and keyboard',
-        step: 0,
-        picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
-        description: 'test select',
-        options: [
-          {
-            text: 'Button one',
-            callback_data: 'test1'
-          },
-          {
-            text: 'Button two',
-            callback_data: 'test2'
-          }
-        ]
-      },
-    ]
-  },
-  {
-    trigger: '/action_three',
-    description: 'Action 3',
-    type: 'INPUT',
-    stages: [
-      {
-        text: 'Reply 1 from test input action',
-        step: 0,
-        description: 'Test input 1'
-      },
-      {
-        text: 'Reply 2 from test input action',
-        step: 1,
-        description: 'Test input 2'
-      },
-      {
-        text: 'Reply 3 from test input action',
-        step: 2,
-        description: 'Test input 3'
-      },
-      {
-        text: 'Reply 4 from test action form with picture and keyboard',
-        step: 3,
-        picture: 'https://ryady.ru/upload/resize_cache/iblock/6c2/600_600_1/000000000000060033_0.jpg',
-        description: 'Test select 4',
-        tips: [
-          {
-            text: 'Tip one'
-          },
-          {
-            text: 'Tip two'
-          }
-        ]
-      }
-    ]
-  },
-]
 
-const DEFAULT_ACTION_MANAGER: BotInteraction.IManager = new BotActionManager(DEFAULT_ACTIONS_LIST);
+
+const DEFAULT_ACTION_MANAGER: BotInteraction.IManager = new BotActionManager(ACTIONS);
 
 export default class ActionsCreator {
   id: string;
@@ -123,7 +37,7 @@ export default class ActionsCreator {
     return admin.firestore().collection('actions').doc(this.id).withConverter(actionCoverter).set(patchedManager, { merge: true });
   }
 
-  private _getExistDataById(id: string): Promise<BotInteraction.IManager | null | undefined>  {
+  private _getExistDataById(id: string): Promise<BotInteraction.IManager | null | undefined> {
     return Promise.resolve(null); // admin.firestore().collection('actions').doc(id).withConverter(actionCoverter).get().then(data => data.data());
   }
 

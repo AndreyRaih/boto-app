@@ -3,9 +3,12 @@ import { Telegraf } from "telegraf";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
 import { BotInteraction } from "../../types/interaction";
-import BotActionExecutor from "./executor";
+import BotActionExecutor from "./handlers/executor";
 import { actionCoverter } from "../../utils/converter";
 import { Bot } from "../../types/bot";
+import BotPostPublisher from "./handlers/publisher";
+import BotSystemCommandsExecutor from "./handlers/systemCommands";
+import BotRegistrationExecutor from "./handlers/registration";
 
 export default class BotActionDispatcher implements BotInteraction.IDispatcher {
   id: string;
@@ -13,7 +16,6 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
   bot: Telegraf | null = null;
   botData: Bot.IBot | null = null;
   instance: BotInteraction.IManager | null | undefined = null;
-  executor: BotInteraction.IExecutor | null = null;
 
   constructor(id: string) {
     if (!id) throw new Error("[id] is required");
@@ -42,15 +44,12 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     this.botData = bot;
     this.bot = bot.telegrafInstance as Telegraf;
 
-    // 4. Set the executor
-    this.executor = new BotActionExecutor(this.bot, this.botData, this.chatId, this.instance?.actions);
+    // 4. Add errors handling and system commands
+    const systemCommandsExecutor = new BotSystemCommandsExecutor(this.bot, this.botData);
+    systemCommandsExecutor.run()
     
-    // 5. Set actions
-    if (this.botData.state === "SENDING_MESSAGE") {
-      this.executor.publishPost()
-    } else {
-      this.executor.executeAction(this.actionProgress).then(this._updateActions.bind(this));
-    }
+    // 5. Define stage
+    this._defineCurrentStage();
 
     this.bot?.catch((err, ctx) => {
       console.log('[Bot] Error', err)
@@ -58,22 +57,49 @@ export default class BotActionDispatcher implements BotInteraction.IDispatcher {
     })
   }
 
-  private async _updateActions(updates: Partial<BotActions.Progress.Update> | void): Promise<any> {
-    if (!updates || updates.isCommand) {
-      if (updates && updates?.restart) this.instance?.deleteActionProgressData(this.chatId);
-      return this._updateInstance();
+  private async _defineCurrentStage(): Promise<void> {
+    if (!this.botData || !this.bot || !this.chatId) throw new Error("[bot], [botData], [chatId] should be defined");
+    
+    const isSendingMsg = this.botData.admins.some(({ id }) => id === this.chatId) && this.botData.admins.find(({ id }) => id === this.chatId)?.sendingMessageInProgress;
+    const isRegistration = this.botData.subscribers.some(({ id }) => id === this.chatId) && this.botData.subscribers.find(({ id }) => id === this.chatId)?.registrationInProgress;
+    const isNeedToRunAction = !Boolean(this.actionProgress);
+    const isActive = Boolean(this.actionProgress);
+
+    if (isSendingMsg) {
+      const publisher = new BotPostPublisher(this.bot, this.botData);
+      publisher.publishPost();
     }
 
-    await this.instance?.updateActionProgressData(this.chatId, updates);
+    const registrationExecutor = new BotRegistrationExecutor(this.bot, this.botData);
+    registrationExecutor.run();
+    
+    if (isRegistration) {
+      return registrationExecutor.executeRegistration()
+    }
+
+    const executor = new BotActionExecutor(this.bot, this.botData, this.chatId, this.instance?.actions, this.actionProgress)
+    let updates: BotActions.Update | null = null;
+
+    if (isNeedToRunAction) {
+      updates = await executor.runAction();
+    }
+
+    if (isActive) {
+      updates = await executor.executeAction()
+    }
+    
+    if (!updates) return;
+    await this._updateActions(updates);
 
     if (updates.finish) {
-      this.executor?.finishAction(this.actionProgress as BotActions.Progress)
+      await executor?.finishAction(this.actionProgress as BotActions.Progress)
       this.instance?.deleteActionProgressData(this.chatId);
-      if (updates.next) {
-        await this.instance?.updateActionProgressData(this.chatId, { id: updates.next, data: null});
-      }
+      await this._updateInstance();
     }
+  }
 
+  private async _updateActions(updates: Partial<BotActions.Update>): Promise<any> {
+    if (updates.data) await this.instance?.updateActionProgressData(this.chatId, updates.data);
     return this._updateInstance();
   }
 

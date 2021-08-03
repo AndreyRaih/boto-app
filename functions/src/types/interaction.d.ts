@@ -1,4 +1,4 @@
-import { Telegraf } from "telegraf";
+import { Telegraf, Telegram } from "telegraf";
 import { BotActions } from "./action";
 import { Bot } from "./bot";
 
@@ -6,7 +6,7 @@ export declare namespace BotInteraction {
     interface IManager {
         actions: BotActions.Action[];
         actionsProgressMap: any;
-        updateActionProgressData: (chatId: string | null, data: Partial<BotActions.Progress.Update>) => Promise<void>;
+        updateActionProgressData: (chatId: string | null, data: Partial<BotActions.Progress>) => Promise<void>;
         deleteActionProgressData: (chatId: string | null) => Promise<void>;
     }
 
@@ -16,16 +16,22 @@ export declare namespace BotInteraction {
         bot: Telegraf | null;
         botData: Bot.IBot | null;
         instance: IManager | null | undefined;
-        executor: IExecutor | null | undefined;
         actionProgress: BotActions.Progress | undefined;
         initialize: (bot: Bot.IBot, id: string) => Promise<void>;
     }
 
     interface IExecutor {
         bot: Telegraf;
+        botData: Bot.IBot;
+        chatId: string;
         actions: BotActions.Action[];
+        progress: BotActions.Progress | undefined;
+        executeAction: () => Promise<BotActions.Update>;
+    }
+
+    interface IPublisher {
+        bot: Telegraf;
+        botData: Bot.IBot;
         publishPost: () => void;
-        executeAction: (progress?: BotActions.Progress) => Promise<BotActions.Progress.Update | void>;
-        finishAction: (progress: BotActions.Progress) => void
     }
 }
