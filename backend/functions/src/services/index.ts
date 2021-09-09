@@ -1,11 +1,11 @@
 import * as express from 'express';
 
-import createService from './create';
 import interactionService from './interaction';
+import adminService from './admin';
 
 const router = express.Router()
 
-router.use('/create', createService);
 router.use('/interaction', interactionService);
+router.use('/admin', adminService);
 
 export default router;

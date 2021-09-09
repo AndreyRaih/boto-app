@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
-import { Bot } from "../types/bot";
+import { Bot } from "../../types/bot";
 
 export default class BotData implements Bot.IBot {
   id: string;
