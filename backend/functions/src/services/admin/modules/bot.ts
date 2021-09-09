@@ -31,7 +31,7 @@ router.get('/list/:id', async (req, res, next) => {
     next();
 })
 
-router.get('/bot/:id', async (req, res, next) => {
+router.get('/:id', async (req, res, next) => {
     const { id } = req.params;
     if (!id) res.status(400).send(new Error("param [id] is required"));
     

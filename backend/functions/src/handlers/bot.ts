@@ -24,8 +24,8 @@ export const getBotListById = async (id: string) => {
 
 export const getBotById = async (id: string) => {
     const bot = await (await admin.firestore().collection('bots').doc(id).get()).data() as any;
-    const activeScenario = await (await admin.firestore().collection('actions').doc(bot.activeScenario).get()).data() as any;
-    const analytic = await (await admin.firestore().collection('analytic').doc(activeScenario.analyticId).get()).data()
+    const activeScenario = bot.activeScenario ? await (await admin.firestore().collection('actions').doc(bot.activeScenario).get()).data() as any : null;
+    const analytic = activeScenario ? await (await admin.firestore().collection('analytic').doc(activeScenario.analyticId).get()).data() : null
     return {...bot, activeScenario, analytic };
 }
 

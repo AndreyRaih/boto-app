@@ -15,7 +15,7 @@ export const createScenario = async (label: string) => {
 };
 
 export const bindScenarioToBot = async (scenarioId: string, botId: string) => {
-    await admin.firestore().collection('bot').doc(botId).update({ activeScenario: scenarioId });
+    await admin.firestore().collection('bots').doc(botId).update({ activeScenario: scenarioId });
 };
 
 export const updateScenarioActions = async (scenarioId: string, stages: any) => {

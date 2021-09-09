@@ -2,12 +2,12 @@ import * as express from 'express';
 
 import botModule from './modules/bot';
 import actionsModule from './modules/actions';
-import invoicesModule from './modules/invoices';
+import analyticModule from './modules/analytic';
 
 const router = express.Router();
 
 router.use('/bot', botModule);
 router.use('/actions', actionsModule);
-router.use('/invoices', invoicesModule);
+router.use('/analytic', analyticModule);
 
 export default router;

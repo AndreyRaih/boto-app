@@ -35,11 +35,11 @@ export const getAnalyticSuiteById = async (id: string) => {
 
 export const getInvoicesByBotId = async (botId: string) => {
     const { invoices, subscribers } = await (await admin.firestore().collection('bots').doc(botId).get()).data() as any;
-    return invoices.map((invoice: any) => {
+    return invoices.length ? invoices.map((invoice: any) => {
         const subscriber = subscribers.find(({ id }: any) => id === invoice.id)
         return {
             ...invoice,
             ...subscriber
         }
-    });
+    }) : [];
 }

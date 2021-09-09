@@ -44,8 +44,10 @@ export default class BotCreator {
       activeScenario: null,
       admins: [],
       subscribers: [],
+      invoices: [],
       webhookUrl: this.webhookUrl
     };
+    console.log(data);
     return admin.firestore().collection('bots').doc(this.id).set(data);
   }
 }

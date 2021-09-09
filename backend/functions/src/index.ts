@@ -13,6 +13,6 @@ const app = express();
 
 app.use(errorMiddleware);
 
-app.use('/admin', services);
+app.use('/api', services);
 
 exports.app = functions.https.onRequest(app);

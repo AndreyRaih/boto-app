@@ -3,7 +3,7 @@ import { getInvoicesByBotId } from '../../../handlers/analytic';
 
 const router = express.Router();
 
-router.get('/list/:id', async(req, res) => {
+router.get('/invoices/:id', async(req, res) => {
     if (!req.params.id) res.status(400).send(new Error("[id] is required param"))
 
     try {
