@@ -17,7 +17,7 @@ router.post('/create', async (req, res, next) => {
   next();
 });
 
-router.get('/list/:id', async (req, res, next) => {
+router.get('/list/:id', async (req, res, next) => {  
     const { id } = req.params;
     if (!id) res.status(400).send(new Error("param [id] is required"));
 
@@ -31,7 +31,7 @@ router.get('/list/:id', async (req, res, next) => {
     next();
 })
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', async (req, res, next) => {  
     const { id } = req.params;
     if (!id) res.status(400).send(new Error("param [id] is required"));
     

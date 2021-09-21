@@ -17,16 +17,17 @@ export const getBotListById = async (id: string) => {
     const list = await admin.firestore().collection('bots').listDocuments();
     for (const item of list) {
         const data: any = (await item.get()).data();
-        if (data.creatorId === id) result.push({ id: data.id, name: data.name, creatorId: data.creatorId })
+        const botId = item.id;
+        if (data.creatorId === id) result.push({ id: botId, name: data.name, creatorId: data.creatorId })
     }
     return result;
 }
 
 export const getBotById = async (id: string) => {
     const bot = await (await admin.firestore().collection('bots').doc(id).get()).data() as any;
-    const activeScenario = bot.activeScenario ? await (await admin.firestore().collection('actions').doc(bot.activeScenario).get()).data() as any : null;
+    const activeScenario = bot && bot.activeScenario ? await (await admin.firestore().collection('actions').doc(bot.activeScenario).get()).data() as any : null;
     const analytic = activeScenario ? await (await admin.firestore().collection('analytic').doc(activeScenario.analyticId).get()).data() : null
-    return {...bot, activeScenario, analytic };
+    return bot ? {...bot, activeScenario, analytic } : null;
 }
 
 export const sendMessageByChatId = (data: any) => {

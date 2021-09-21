@@ -1,14 +1,14 @@
 import * as express from 'express';
-import { bindScenarioToBot, createScenario, updateScenarioActions } from '../../../handlers/actions';
+import { bindScenarioToBot, createScenario, updateScenarioActions, getScenarioListById } from '../../../handlers/actions';
 import { createAnalyticSuite } from '../../../handlers/analytic';
 
 const router = express.Router();
 
 router.post('/scenario/create', async (req, res, next) => {
-  const { name } = req.body;
+  const { name, creatorId } = req.body;
 
   try {
-    const id = await createScenario(name);
+    const id = await createScenario(creatorId, name);
     await createAnalyticSuite(id);
     res.sendStatus(200);
   } catch (error) {
@@ -18,13 +18,26 @@ router.post('/scenario/create', async (req, res, next) => {
   next();
 });
 
-router.get('/scenario/:id/bind', async (req, res, next) => {
-  const { id } = req.params;
-  const { botId } = req.query;
-  if (!id || !botId) res.status(400).send(new Error('[id], [botId] are required query params'));
+router.get('/scenario/list', async (req, res, next) => {
+  const { creatorId } = req.query;
 
   try {
-    await bindScenarioToBot(id, botId as string);
+    const list = await getScenarioListById(creatorId as string);
+    res.status(200).send(list);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+  next();
+});
+
+router.post('/scenario/:id/bind', async (req, res, next) => {
+  const { id } = req.params;
+  const { ids } = req.body;
+  if (!id || !ids) res.status(400).send(new Error('[id], [ids] are required query params'));
+
+  try {
+    await bindScenarioToBot(id, ids as string[]);
     res.sendStatus(200);
   } catch (error) {
     console.log(error);

@@ -1,0 +1,22 @@
+{
+  "name": "boto-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "run:backend": "cd ./backend/functions && npm run serve",
+    "run:ngrok": "ngrok http 5001",
+    "run:frontend": "cd ./frontend && npm run serve",
+    "serve": "npm run run:backend & npm run run:ngrok & npm run run:frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndreyRaih/boto-app.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AndreyRaih/boto-app/issues"
+  },
+  "homepage": "https://github.com/AndreyRaih/boto-app#readme"
+}
