@@ -1,5 +1,5 @@
 import * as express from 'express';
-import { bindScenarioToBot, createScenario, updateScenarioActions, getScenarioListById } from '../../../handlers/actions';
+import { bindScenarioToBot, createScenario, updateScenarioActions, getScenarioListById, deleteScenarioActions } from '../../../handlers/actions';
 import { createAnalyticSuite } from '../../../handlers/analytic';
 
 const router = express.Router();
@@ -31,13 +31,13 @@ router.get('/scenario/list', async (req, res, next) => {
   next();
 });
 
-router.post('/scenario/:id/bind', async (req, res, next) => {
-  const { id } = req.params;
-  const { ids } = req.body;
-  if (!id || !ids) res.status(400).send(new Error('[id], [ids] are required query params'));
+router.post('/scenario/:scenarioId/bind', async (req, res, next) => {
+  const { scenarioId } = req.params;
+  const { id } = req.body;
+  if (!scenarioId || !id) res.status(400).send(new Error('[id], [scenarioId] are required query params'));
 
   try {
-    await bindScenarioToBot(id, ids as string[]);
+    await bindScenarioToBot(scenarioId, id as string);
     res.sendStatus(200);
   } catch (error) {
     console.log(error);
@@ -46,13 +46,28 @@ router.post('/scenario/:id/bind', async (req, res, next) => {
   next();
 });
 
-router.post('/scenario/:id/update', async (req, res, next) => {
-  const { id } = req.params;
-  const { stages } = req.body;
-  if (!id || !stages) res.status(400).send(new Error('[id], [stages] are required'));
+router.post('/scenario/:scenarioId/update', async (req, res, next) => {
+  const { scenarioId } = req.params;
+  const { stage } = req.body;
+  if (!scenarioId || !stage) res.status(400).send(new Error('[scenarioId], [stage] are required'));
 
   try {
-    await updateScenarioActions(id, (stages || []));
+    await updateScenarioActions(scenarioId, (stage || null));
+    res.sendStatus(200);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+  next();
+});
+
+router.post('/scenario/:scenarioId/delete_stage', async (req, res, next) => {
+  const { scenarioId } = req.params;
+  const { id } = req.body;
+  if (!scenarioId || !id) res.status(400).send(new Error('[scenarioId], [id] are required'));
+
+  try {
+    await deleteScenarioActions(scenarioId, id);
     res.sendStatus(200);
   } catch (error) {
     console.log(error);

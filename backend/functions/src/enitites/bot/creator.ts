@@ -6,6 +6,7 @@ const API_INTERACTION_URL: string = 'https://298f55289fa7.ngrok.io/botoapp/us-ce
 
 export default class BotCreator {
   token: string;
+  editToken: string | null;
   name: string;
   id: string;
   userId: string;
@@ -13,6 +14,7 @@ export default class BotCreator {
   constructor(userId: string, token: string, name: string) {
     this.userId = userId;
     this.token = token;
+    this.editToken = null;
     this.name = name;
     this.id = uuidv4();
   }
@@ -41,10 +43,10 @@ export default class BotCreator {
       creatorId: this.userId,
       token: this.token,
       name: this.name,
+      editToken: this.editToken,
       activeScenario: null,
       admins: [],
       subscribers: [],
-      invoices: [],
       webhookUrl: this.webhookUrl
     };
     console.log(data);

@@ -10,6 +10,8 @@ import { BotInteraction } from "../types/interaction";
 export const createBot = async ({ userId, token, name }: { userId: string, token: string, name: string}) => {
     const creator = new BotCreator(userId, token, name);
     await creator.createBot();
+    const bot = await (await admin.firestore().collection('bots').doc(creator.id).get()).data() as any;
+    return { id: creator.id, ...bot };
 }
 
 export const getBotListById = async (id: string) => {
@@ -27,7 +29,20 @@ export const getBotById = async (id: string) => {
     const bot = await (await admin.firestore().collection('bots').doc(id).get()).data() as any;
     const activeScenario = bot && bot.activeScenario ? await (await admin.firestore().collection('actions').doc(bot.activeScenario).get()).data() as any : null;
     const analytic = activeScenario ? await (await admin.firestore().collection('analytic').doc(activeScenario.analyticId).get()).data() : null
-    return bot ? {...bot, activeScenario, analytic } : null;
+    return bot ? {...bot, id, activeScenario, analytic } : null;
+}
+
+export const deleteBotById = (id: string) => {
+    return admin.firestore().collection('bots').doc(id).delete();
+}
+
+export const setEditTokenToBotById = (id: string, token: string | null) => {
+    return admin.firestore().collection('bots').doc(id).update({ editToken: token });
+}
+
+export const deleteBotAdminByIds = async (id: string, adminId: number) => {
+    const existList = (await (await admin.firestore().collection('bots').doc(id).get()).data() as any).admins;
+    return admin.firestore().collection('bots').doc(id).update({ admins: existList.filter((id: number) => id !== adminId) });
 }
 
 export const sendMessageByChatId = (data: any) => {

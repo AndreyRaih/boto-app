@@ -15,15 +15,20 @@ export const createScenario = async (creatorId: string, label: string) => {
     return analyticId;
 };
 
-export const bindScenarioToBot = async (scenarioId: string, ids: string[]) => {
-    for (const id of ids) {
-        await admin.firestore().collection('bots').doc(id).update({ activeScenario: scenarioId });
-    }
-    await admin.firestore().collection('actions').doc(scenarioId).update({ bots: ids });
+export const bindScenarioToBot = async (scenarioId: string, botId: string) => {
+    await admin.firestore().collection('bots').doc(botId).update({ activeScenario: scenarioId });
+    await admin.firestore().collection('actions').doc(scenarioId).update({ bot: botId });
 };
 
-export const updateScenarioActions = async (scenarioId: string, stages: any) => {
-    await admin.firestore().collection('actions').doc(scenarioId).update({ stages });
+export const updateScenarioActions = async (scenarioId: string, stage: any) => {
+    const scenario = await (await admin.firestore().collection('actions').doc(scenarioId).get()).data() as any;
+    await admin.firestore().collection('actions').doc(scenarioId).update({ stages: [...scenario.stages as any[], stage] });
+};
+
+export const deleteScenarioActions = async (scenarioId: string, stageId: any) => {
+    const scenario = await (await admin.firestore().collection('actions').doc(scenarioId).get()).data() as any;
+    const patchedStages = scenario.stages.filter(({ key }: any) => key !== stageId);
+    await admin.firestore().collection('actions').doc(scenarioId).update({ stages: patchedStages });
 };
 
 export const getScenarioListById = async (creatorId: string) => {
