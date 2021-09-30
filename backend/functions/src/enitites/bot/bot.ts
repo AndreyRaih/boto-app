@@ -4,6 +4,8 @@ import { Bot } from "../../types/bot";
 
 export default class BotData implements Bot.IBot {
   id: string;
+  activeScenario!: string;
+  analyticId!: string;
   name: string = '';
   admins: Bot.User[] = [];
   subscribers: Bot.User[] = [];
@@ -19,7 +21,7 @@ export default class BotData implements Bot.IBot {
 
   async run(): Promise<void> {
     // 1. Restore bot data
-    const { token,  name, admins, subscribers } = await this._restoreBotData();
+    const { token,  name, admins, subscribers, activeScenario, analyticId } = await this._restoreBotData();
     if (!token) throw new Error("Bot doesnt exist");
 
     // 2. Initialize bot
@@ -29,6 +31,8 @@ export default class BotData implements Bot.IBot {
     this.admins = admins;
     this.subscribers = subscribers;
     this.name = name;
+    this.activeScenario = activeScenario;
+    this.analyticId = analyticId
   };
 
   async handleUpdates(request: any, response: any): Promise<void> {

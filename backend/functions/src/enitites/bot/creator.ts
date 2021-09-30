@@ -49,7 +49,6 @@ export default class BotCreator {
       subscribers: [],
       webhookUrl: this.webhookUrl
     };
-    console.log(data);
     return admin.firestore().collection('bots').doc(this.id).set(data);
   }
 }

@@ -1,11 +1,10 @@
 import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
-import BotActionDispatcher from "../enitites/actions/dispatcher";
+import BotInteractionDispatcher from "../enitites/actions/dispatcher";
 import BotReplyBuilder from "../enitites/actions/replyBuilder";
 import BotData from "../enitites/bot/bot";
 import BotCreator from '../enitites/bot/creator';
 import { Bot } from "../types/bot";
-import { BotInteraction } from "../types/interaction";
 
 export const createBot = async ({ userId, token, name }: { userId: string, token: string, name: string}) => {
     const creator = new BotCreator(userId, token, name);
@@ -53,11 +52,13 @@ export const sendMessageByChatId = (data: any) => {
 }
 
 export const recieveMessageByBotId = async (id: string, req: any, res: any) => {
-    const actionManager: BotInteraction.IDispatcher = new BotActionDispatcher(id);
-    const reciever: Bot.IBot = new BotData(id);
     const message = (req.body.message || req.body.callback_query.message)
-    
+
+    const reciever: Bot.IBot = new BotData(id);
     await reciever.run(req.body);
-    await actionManager.initialize(reciever as Bot.IBot, message.chat.id);
+
+    if (!reciever.activeScenario) throw new Error("Bot doesnt has active scenario");
+    const dispatcher = new BotInteractionDispatcher(reciever.activeScenario, reciever.analyticId, message.chat.id.toString());
+    await dispatcher.initialize(reciever as Bot.IBot);
     reciever.handleUpdates(req, res);
 }

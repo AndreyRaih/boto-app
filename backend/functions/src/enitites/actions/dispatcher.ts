@@ -2,112 +2,71 @@ import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
-import { BotInteraction } from "../../types/interaction";
-import BotActionExecutor from "./handlers/executor";
-import { actionCoverter } from "../../utils/converter";
 import { Bot } from "../../types/bot";
-import BotPostPublisher from "./handlers/publisher";
-import BotSystemCommandsExecutor from "./handlers/systemCommands";
-import BotRegistrationExecutor from "./handlers/registration";
+import { BotRegistrationExecutor } from "./executors/registration";
+import { BotScenarioExecutor } from "./executors/scenario";
 
-export default class BotActionDispatcher implements BotInteraction.IDispatcher {
-  id: string;
-  chatId: string | null = null;
-  bot: Telegraf | null = null;
-  botData: Bot.IBot | null = null;
-  instance: BotInteraction.IManager | null | undefined = null;
-
-  constructor(id: string) {
-    if (!id) throw new Error("[id] is required");
-    this.id = id;
+export default class BotInteractionDispatcher {
+  instances!: {
+    bot: Bot.IBot;
+    telegraf: Telegraf;
+    scenario: BotActions.Action;
+    analytic: any
+    dialog: any;
+  }
+  actionId: string;
+  analyticId: string;
+  chatId: string;
+  
+  constructor(actionId: string, analyticId: string, chatId: string) {
+    this.actionId = actionId;
+    this.analyticId = analyticId;
+    this.chatId = chatId.toString();
   }
 
-  get actionProgress(): BotActions.Progress | undefined {
-    if (!this.chatId || !this.instance) return;
-
-    return this.instance.actionsProgressMap[this.chatId] || null;
-  }
-
-  async initialize(bot: Bot.IBot, chatId: string): Promise<void> {
-    // 1. Define instance
-    this.instance = await admin.firestore()
-      .collection('actions')
-      .doc(this.id)
-      .withConverter(actionCoverter)
-      .get()
-      .then(data => data.data());
+  async initialize(bot: Bot.IBot): Promise<void> {
+    // 1. Define instances
+    const { telegrafInstance } = bot;
+    const scenario = await (await admin.firestore().collection('actions').doc(this.actionId).get()).data() as BotActions.Action;
+    const analytic = await (await admin.firestore().collection('analytic').doc(this.analyticId).get()).data() as any;
+    const dialogInstance = await (await admin.firestore().collection('dialogs').doc(this.chatId).get()).data() as any;
+    this.instances = {
+      bot,
+      scenario,
+      analytic,
+      dialog: { ...dialogInstance, id: this.chatId },
+      telegraf: telegrafInstance as Telegraf
+    };
     
-    // 2. Set chatId
-    this.chatId = chatId;
-
-    // 3. Linked bot
-    this.botData = bot;
-    this.bot = bot.telegrafInstance as Telegraf;
-
-    // 4. Add errors handling and system commands
-    const systemCommandsExecutor = new BotSystemCommandsExecutor(this.bot, this.botData);
-    systemCommandsExecutor.run()
-    
-    // 5. Define stage
+    // 2. Define stage
     this._defineCurrentStage();
 
-    this.bot?.catch((err, ctx) => {
+    this.instances.telegraf?.catch((err, ctx) => {
       console.log('[Bot] Error', err)
       ctx.reply(`Ooops, encountered an error for ${ctx.updateType}`, err as ExtraReplyMessage)
     })
   }
 
   private async _defineCurrentStage(): Promise<void> {
-    if (!this.botData || !this.bot || !this.chatId) throw new Error("[bot], [botData], [chatId] should be defined");
+    if (!this.instances.bot || !this.instances.telegraf || !this.chatId) throw new Error("[bot], [botData], [chatId] should be defined");
     
-    const isSendingMsg = this.botData.admins.some(({ id }) => id === this.chatId) && this.botData.admins.find(({ id }) => id === this.chatId)?.sendingMessageInProgress;
-    const isRegistration = this.botData.subscribers.some(({ id }) => id === this.chatId) && this.botData.subscribers.find(({ id }) => id === this.chatId)?.registrationInProgress;
-    const isNeedToRunAction = !Boolean(this.actionProgress);
-    const isActive = Boolean(this.actionProgress);
-
-    if (isSendingMsg) {
-      const publisher = new BotPostPublisher(this.bot, this.botData);
-      publisher.publishPost();
+    const hasProgress = Boolean(this.instances.dialog);
+    if (!hasProgress) {
+      await admin.firestore().collection('dialogs').doc(this.chatId).set({ contactData: {}, history: [], lastEvent: null, nextId: null })
     }
-
-    const registrationExecutor = new BotRegistrationExecutor(this.bot, this.botData);
-    registrationExecutor.run();
-    
-    if (isRegistration) {
-      return registrationExecutor.executeRegistration()
+    const hasContactData = Boolean(this.instances.dialog.contactData) &&
+      'name' in this.instances.dialog.contactData &&
+      'phone' in this.instances.dialog.contactData &&
+      'address' in this.instances.dialog.contactData;
+    if (!hasContactData) {
+      const contactData = await new BotRegistrationExecutor(this.instances.telegraf, this.instances.dialog.contactData).execute();
+      this._updateDialogData({ contactData })
     }
-
-    const executor = new BotActionExecutor(this.bot, this.botData, this.chatId, this.instance?.actions, this.actionProgress)
-    let updates: BotActions.Update | null = null;
-
-    if (isNeedToRunAction) {
-      updates = await executor.runAction();
-    }
-
-    if (isActive) {
-      updates = await executor.executeAction()
-    }
-    
-    if (!updates) return;
-    await this._updateActions(updates);
-
-    if (updates.finish) {
-      await executor?.finishAction(this.actionProgress as BotActions.Progress)
-      this.instance?.deleteActionProgressData(this.chatId);
-      await this._updateInstance();
-    }
+    const updates = await new BotScenarioExecutor(this.instances.telegraf, this.instances.scenario, this.instances.dialog, this.instances.analytic).execute();
+    this._updateDialogData(updates)
   }
 
-  private async _updateActions(updates: Partial<BotActions.Update>): Promise<any> {
-    if (updates.data) await this.instance?.updateActionProgressData(this.chatId, updates.data);
-    return this._updateInstance();
-  }
-
-  private _updateInstance() {
-    return admin.firestore()
-      .collection('actions')
-      .doc(this.id)
-      .withConverter(actionCoverter)
-      .set(this.instance, { merge: true });
+  private _updateDialogData(updates: any) {
+    return admin.firestore().collection('dialogs').doc(this.chatId).set(updates, { merge: true });
   }
 }

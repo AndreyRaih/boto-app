@@ -4,19 +4,18 @@ export declare namespace Bot {
     type ContactData = {
         name?: string | null;
         phone: string | null;
-        adress?: string | null;
+        address?: string | null;
     }
 
     type User = {
         id: string;
-        isPaused?: boolean;
-        sendingMessageInProgress?: boolean;
-        registrationInProgress?: boolean;
         contactData?: ContactData;
     }
 
     interface IBot {
         id: string;
+        analyticId: string;
+        activeScenario: string;
         telegrafInstance: Telegraf | null;
         name: string,
         admins: User[],
