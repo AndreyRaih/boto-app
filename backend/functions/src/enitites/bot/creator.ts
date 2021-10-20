@@ -2,7 +2,7 @@ import axios from "axios";
 import * as admin from "firebase-admin";
 import { v4 as uuidv4 } from 'uuid';
 
-const API_INTERACTION_URL: string = 'https://298f55289fa7.ngrok.io/botoapp/us-central1/app/api/interaction/bot/'
+const API_INTERACTION_URL: string = 'https://7ee9-195-78-127-129.ngrok.io/botoapp/us-central1/app/api/interaction/reply/'
 
 export default class BotCreator {
   token: string;
@@ -10,6 +10,7 @@ export default class BotCreator {
   name: string;
   id: string;
   userId: string;
+  analyticId: string;
 
   constructor(userId: string, token: string, name: string) {
     this.userId = userId;
@@ -17,6 +18,7 @@ export default class BotCreator {
     this.editToken = null;
     this.name = name;
     this.id = uuidv4();
+    this.analyticId = uuidv4();
   }
 
   get webhookUrl() {
@@ -44,6 +46,7 @@ export default class BotCreator {
       token: this.token,
       name: this.name,
       editToken: this.editToken,
+      analyticId: this.analyticId,
       activeScenario: null,
       admins: [],
       subscribers: [],

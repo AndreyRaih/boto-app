@@ -3,8 +3,8 @@ import { Telegraf } from "telegraf";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { BotActions } from "../../types/action";
 import { Bot } from "../../types/bot";
-import { BotRegistrationExecutor } from "./executors/registration";
-import { BotScenarioExecutor } from "./executors/scenario";
+import BotoAnalyticObserver, { EVENT_MAP } from "../analytic/observer";
+import { BotScenarioExecutor } from "./scenario";
 
 export default class BotInteractionDispatcher {
   instances!: {
@@ -17,6 +17,7 @@ export default class BotInteractionDispatcher {
   actionId: string;
   analyticId: string;
   chatId: string;
+  analyticObserver: any;
   
   constructor(actionId: string, analyticId: string, chatId: string) {
     this.actionId = actionId;
@@ -28,13 +29,14 @@ export default class BotInteractionDispatcher {
     // 1. Define instances
     const { telegrafInstance } = bot;
     const scenario = await (await admin.firestore().collection('actions').doc(this.actionId).get()).data() as BotActions.Action;
-    const analytic = await (await admin.firestore().collection('analytic').doc(this.analyticId).get()).data() as any;
-    const dialogInstance = await (await admin.firestore().collection('dialogs').doc(this.chatId).get()).data() as any;
+    const analytic = new BotoAnalyticObserver(this.analyticId);
+    await analytic.initialize()
+    const dialogInstance = await (await admin.firestore().collection('dialogs').doc(`${bot.id}:${this.chatId}`).get()).data() as any;
     this.instances = {
       bot,
       scenario,
       analytic,
-      dialog: { ...dialogInstance, id: this.chatId },
+      dialog: dialogInstance || null,
       telegraf: telegrafInstance as Telegraf
     };
     
@@ -52,21 +54,16 @@ export default class BotInteractionDispatcher {
     
     const hasProgress = Boolean(this.instances.dialog);
     if (!hasProgress) {
-      await admin.firestore().collection('dialogs').doc(this.chatId).set({ contactData: {}, history: [], lastEvent: null, nextId: null })
+      const defaultDialog = { history: [], id: parseInt(this.chatId) };
+      await admin.firestore().collection('dialogs').doc(`${this.instances.bot.id}:${this.chatId}`).set(defaultDialog)
+      this.instances.dialog = defaultDialog;
+      this.instances.analytic.updateSuite(EVENT_MAP.BASIC.SET_USER);
     }
-    const hasContactData = Boolean(this.instances.dialog.contactData) &&
-      'name' in this.instances.dialog.contactData &&
-      'phone' in this.instances.dialog.contactData &&
-      'address' in this.instances.dialog.contactData;
-    if (!hasContactData) {
-      const contactData = await new BotRegistrationExecutor(this.instances.telegraf, this.instances.dialog.contactData).execute();
-      this._updateDialogData({ contactData })
-    }
-    const updates = await new BotScenarioExecutor(this.instances.telegraf, this.instances.scenario, this.instances.dialog, this.instances.analytic).execute();
+    const updates = await new BotScenarioExecutor(this.instances.telegraf, this.instances.scenario, this.instances.dialog, this.instances.analytic).execute() as any;
     this._updateDialogData(updates)
   }
 
   private _updateDialogData(updates: any) {
-    return admin.firestore().collection('dialogs').doc(this.chatId).set(updates, { merge: true });
+    return admin.firestore().collection('dialogs').doc(`${this.instances.bot.id}:${this.chatId}`).set(updates, { merge: true });
   }
 }

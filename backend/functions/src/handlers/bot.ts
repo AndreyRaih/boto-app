@@ -2,14 +2,17 @@ import * as admin from "firebase-admin";
 import { Telegraf } from "telegraf";
 import BotInteractionDispatcher from "../enitites/actions/dispatcher";
 import BotReplyBuilder from "../enitites/actions/replyBuilder";
+import BotoAnalyticObserver from "../enitites/analytic/observer";
 import BotData from "../enitites/bot/bot";
 import BotCreator from '../enitites/bot/creator';
 import { Bot } from "../types/bot";
+import { createAnalyticSuite } from "./analytic";
 
 export const createBot = async ({ userId, token, name }: { userId: string, token: string, name: string}) => {
     const creator = new BotCreator(userId, token, name);
     await creator.createBot();
     const bot = await (await admin.firestore().collection('bots').doc(creator.id).get()).data() as any;
+    await createAnalyticSuite(creator.analyticId);
     return { id: creator.id, ...bot };
 }
 
@@ -25,9 +28,11 @@ export const getBotListById = async (id: string) => {
 }
 
 export const getBotById = async (id: string) => {
-    const bot = await (await admin.firestore().collection('bots').doc(id).get()).data() as any;
+    const bot = (await admin.firestore().collection('bots').doc(id).get()).data() as any;
+    const analyticObserver = new BotoAnalyticObserver(bot.analyticId);
+    await analyticObserver.initialize();
     const activeScenario = bot && bot.activeScenario ? await (await admin.firestore().collection('actions').doc(bot.activeScenario).get()).data() as any : null;
-    const analytic = activeScenario ? await (await admin.firestore().collection('analytic').doc(activeScenario.analyticId).get()).data() : null
+    const analytic = analyticObserver.getSuiteSnapshot();
     return bot ? {...bot, id, activeScenario, analytic } : null;
 }
 
@@ -44,9 +49,10 @@ export const deleteBotAdminByIds = async (id: string, adminId: number) => {
     return admin.firestore().collection('bots').doc(id).update({ admins: existList.filter((id: number) => id !== adminId) });
 }
 
-export const sendMessageByChatId = (data: any) => {
+export const sendMessageByChatId = async (data: any) => {
     const { from, to, message } = data;
-    const reciever: Bot.IBot = new BotData(from as string);
+    const reciever = new BotData(from as string);
+    await reciever.run();
     const replier = new BotReplyBuilder(reciever.telegrafInstance as Telegraf)
     replier.replyByChatId(to, (message || ''))
 }

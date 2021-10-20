@@ -11,11 +11,9 @@ export declare namespace BotActions {
         id: string;
         images: string[];
         text: string;
+        title?: string;
         event: BotActions.Event;
-        trigger: BotActions.Trigger;
-        triggers?: BotActions.Trigger[];
-        nextId?: string | null;
-        parentId?: string | null;
+        triggers: BotActions.Trigger[];
     }
 
     type Event = {
@@ -24,12 +22,7 @@ export declare namespace BotActions {
     }
 
     type Trigger = {
-        type: 'button' | 'input';
-        description: string;
-        text: string | null;
-        matchString?: string | null;
-        validation: string | null;
-        inputNeedMatch: boolean;
-        id?: string;
+        destinationId: string;
+        text: string;
     }
 }

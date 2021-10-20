@@ -1,6 +1,5 @@
 import * as express from 'express';
 import { bindScenarioToBot, createScenario, updateScenarioActions, getScenarioListById, deleteScenarioActions } from '../../../handlers/actions';
-import { createAnalyticSuite } from '../../../handlers/analytic';
 
 const router = express.Router();
 
@@ -8,8 +7,7 @@ router.post('/scenario/create', async (req, res, next) => {
   const { name, creatorId } = req.body;
 
   try {
-    const id = await createScenario(creatorId, name);
-    await createAnalyticSuite(id);
+    await createScenario(creatorId, name);
     res.sendStatus(200);
   } catch (error) {
     console.log(error);

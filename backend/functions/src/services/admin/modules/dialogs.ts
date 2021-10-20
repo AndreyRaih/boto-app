@@ -1,23 +1,19 @@
 import * as express from 'express';
-import { getBotById } from '../../../handlers/bot';
+import admin = require('firebase-admin');
 import { getDialogsById } from '../../../handlers/dialogs';
 
 const router = express.Router();
 
 router.post('/list', async(req, res) => {
     if (!req.body.ids) res.status(400).send(new Error("[id] is required param"))
-
     try {
         const list = [];
+        const dialogs = await admin.firestore().collection('dialogs').listDocuments();
         for (const botId of req.body.ids) {
-            const bot = await getBotById(botId) as any;
-            for (const subscriber of bot.subscribers) {
-                const dialogs = await (await (await getDialogsById(subscriber.id.toString())).get()).data();
-                list.push({
-                    id: subscriber.id,
-                    botId,
-                    ...dialogs
-                })
+            const botsDialogs = dialogs.filter(item => item.id.startsWith(botId))
+            for (const dialog of botsDialogs) {
+                const item = await (await dialog.get()).data();
+                list.push({ botId, ...item });
             }
         }
         res.status(200).send(list);

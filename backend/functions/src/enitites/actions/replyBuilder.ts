@@ -11,7 +11,7 @@ export default class BotReplyBuilder {
         this.bot = bot;
     }
 
-    replyByChatId(chatId: string, reply: BotActions.Stage | string) {
+    async replyByChatId(chatId: string, reply: BotActions.Stage | string) {
         if (typeof reply === 'string') {
             this.bot.telegram.sendMessage(chatId, reply);
             return;
@@ -19,11 +19,18 @@ export default class BotReplyBuilder {
 
         if (!reply.text) throw new Error("[reply.text] should be defined");
         
-        const hasKeyboard: boolean = Boolean((reply.triggers as BotActions.Trigger[]).length);
-        const keyboard: ExtraReplyMessage = hasKeyboard ? this._buildKeyboardByList(reply.triggers as BotActions.Trigger[]) : {};
+        const isLastMsg: boolean = !Boolean((reply.triggers as BotActions.Trigger[]).length);
+        const keyboard: ExtraReplyMessage = !isLastMsg ? this._buildKeyboardByList(reply.triggers as BotActions.Trigger[]) : {};
 
-        if (reply.images.length) {
-            this.bot.telegram.sendMediaGroup(chatId, reply.images.map(image => ({ type: 'photo', media: image, caption: reply.text })), keyboard);
+        if (isLastMsg) reply.text = `${reply.text}\n\nДля возвращения к началу беседы отправьте команду: /start`
+
+        if (reply.images && reply.images.length) {
+            if (reply.images.length === 1) {
+                this.bot.telegram.sendPhoto(chatId, reply.images[0], {...keyboard, caption: reply.text });
+            } else {
+                await this.bot.telegram.sendMediaGroup(chatId, reply.images.map(image => ({ type: 'photo', media: image })));
+                this.bot.telegram.sendMessage(chatId, reply.text, keyboard);
+            }
         } else {
             this.bot.telegram.sendMessage(chatId, reply.text, keyboard);
         };
@@ -31,18 +38,16 @@ export default class BotReplyBuilder {
             date: Date.now(),
             text: reply.text,
             event: null,
-            isBot: true
+            isBot: true,
+            isLastMsg
         }
     }
 
     private _buildKeyboardByList(triggers: BotActions.Trigger[]): ExtraReplyMessage {
-        const inlineButtons: InlineKeyboardButton[] = triggers.filter(({ type }) => type === 'button').map(trigger => ({
+        const inlineButtons: InlineKeyboardButton[] = triggers.map(trigger => ({
             text: trigger.text as string,
-            callback_data: trigger.id as string
+            callback_data: trigger.destinationId as string
         }));
-        const inputHints = triggers.filter(({ type, inputNeedMatch }) => type === 'input' && inputNeedMatch).map(trigger => ({
-            text: trigger.matchString as string
-        }));
-        return { reply_markup: { ...Markup.inlineKeyboard([inlineButtons]).reply_markup, ...Markup.keyboard([inputHints]).reply_markup } };
+        return { reply_markup: { ...Markup.inlineKeyboard([inlineButtons]).reply_markup } };
     }
 }

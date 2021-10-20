@@ -10,6 +10,7 @@ export default class BotData implements Bot.IBot {
   admins: Bot.User[] = [];
   subscribers: Bot.User[] = [];
   telegrafInstance: Telegraf | null = null;
+  editToken: null | string = null
 
   constructor(id: string) {
     if (!id) throw new Error(
@@ -21,7 +22,7 @@ export default class BotData implements Bot.IBot {
 
   async run(): Promise<void> {
     // 1. Restore bot data
-    const { token,  name, admins, subscribers, activeScenario, analyticId } = await this._restoreBotData();
+    const { token,  name, admins, subscribers, activeScenario, analyticId, editToken } = await this._restoreBotData();
     if (!token) throw new Error("Bot doesnt exist");
 
     // 2. Initialize bot
@@ -32,7 +33,8 @@ export default class BotData implements Bot.IBot {
     this.subscribers = subscribers;
     this.name = name;
     this.activeScenario = activeScenario;
-    this.analyticId = analyticId
+    this.analyticId = analyticId;
+    this.editToken = editToken;
   };
 
   async handleUpdates(request: any, response: any): Promise<void> {
@@ -41,14 +43,14 @@ export default class BotData implements Bot.IBot {
     return await this.telegrafInstance.handleUpdate(request.body, response);
   }
 
-  async setAdmin(id: string) {
-    const admins = Array.from(new Set([...this.admins, { id }]));
+  async setAdmin(data: any) {
+    const admins = Array.from(new Set([...this.admins, data]));
     this.admins = admins;
     admin.firestore().collection('bots').doc(this.id).update({ admins });
   };
 
-  async setSubscriber(id: string) {
-    const subscribers = Array.from(new Set([...this.admins, { id }]));
+  async setSubscriber(data: any) {
+    const subscribers = Array.from(new Set([...this.subscribers, data]));
     this.subscribers = subscribers;
     admin.firestore().collection('bots').doc(this.id).update({ subscribers });
   };
