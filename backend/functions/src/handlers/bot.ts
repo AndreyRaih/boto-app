@@ -12,8 +12,8 @@ export const createBot = async ({ userId, token, name }: { userId: string, token
     const creator = new BotCreator(userId, token, name);
     await creator.createBot();
     const bot = await (await admin.firestore().collection('bots').doc(creator.id).get()).data() as any;
-    await createAnalyticSuite(creator.analyticId);
-    return { id: creator.id, ...bot };
+    const analytic = await createAnalyticSuite(creator.analyticId);
+    return { id: creator.id, ...bot, analytic };
 }
 
 export const getBotListById = async (id: string) => {

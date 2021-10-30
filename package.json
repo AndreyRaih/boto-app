@@ -18,5 +18,9 @@
   "bugs": {
     "url": "https://github.com/AndreyRaih/boto-app/issues"
   },
-  "homepage": "https://github.com/AndreyRaih/boto-app#readme"
+  "homepage": "https://github.com/AndreyRaih/boto-app#readme",
+  "dependencies": {
+    "mitt": "^3.0.0",
+    "tiny-emitter": "^2.1.0"
+  }
 }

@@ -26,4 +26,5 @@ export const createAnalyticSuite = async (id: string) => {
         }
     }
     await admin.firestore().collection('analytic').doc(id).set(defaultAnalyticSuite);
+    return defaultAnalyticSuite;
 }

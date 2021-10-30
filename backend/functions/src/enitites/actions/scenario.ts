@@ -33,7 +33,7 @@ export class BotScenarioExecutor {
                 }
 
                 // Create timestamp
-                const firstSessionTimestamp = message.date - ((this.dialog.history as any[]).map(({ date }) => date).filter((date) => (message.date - date) < 3600000).reverse()[0] || 0);
+                const firstSessionTimestamp = message.date - ([...(this.dialog.history as any[])].map(({ date }) => date).filter((date) => (message.date - date) < 3600000).reverse()[0] || 0);
 
                 // Restart chat if `/start` command recieved
                 if (value === '/start') {
