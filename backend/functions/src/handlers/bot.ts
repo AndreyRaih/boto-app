@@ -6,14 +6,18 @@ import BotoAnalyticObserver from "../enitites/analytic/observer";
 import BotData from "../enitites/bot/bot";
 import BotCreator from '../enitites/bot/creator';
 import { Bot } from "../types/bot";
+import { createScenario } from "./actions";
 import { createAnalyticSuite } from "./analytic";
 
 export const createBot = async ({ userId, token, name }: { userId: string, token: string, name: string}) => {
-    const creator = new BotCreator(userId, token, name);
+    const activeScenario = await createScenario(userId)
+    const creator = new BotCreator(userId, token, name, activeScenario);
     await creator.createBot();
     const bot = await (await admin.firestore().collection('bots').doc(creator.id).get()).data() as any;
-    const analytic = await createAnalyticSuite(creator.analyticId);
-    return { id: creator.id, ...bot, analytic };
+    await createAnalyticSuite(creator.analyticId);
+    const analyticInstance = new BotoAnalyticObserver(creator.analyticId);
+    await analyticInstance.initialize()
+    return { id: creator.id, ...bot, analytic: analyticInstance.getSuiteSnapshot() };
 }
 
 export const getBotListById = async (id: string) => {
@@ -36,8 +40,12 @@ export const getBotById = async (id: string) => {
     return bot ? {...bot, id, activeScenario, analytic } : null;
 }
 
-export const deleteBotById = (id: string) => {
-    return admin.firestore().collection('bots').doc(id).delete();
+export const deleteBotById = async (botId: string) => {
+    const { activeScenario, analyticId, id } = (await admin.firestore().collection('bots').doc(botId).get()).data() as any;
+    admin.firestore().collection('analytic').doc(analyticId).delete()
+    admin.firestore().collection('actions').doc(activeScenario).delete();
+    (await admin.firestore().collection('dialogs').listDocuments()).forEach((doc) => doc.id.includes(id) && doc.delete())
+    admin.firestore().collection('bots').doc(botId).delete();
 }
 
 export const setEditTokenToBotById = (id: string, token: string | null) => {

@@ -17,7 +17,7 @@ export default class BotReplyBuilder {
             return;
         }
 
-        if (!reply.text) throw new Error("[reply.text] should be defined");
+        if (!reply.text) reply.text = '...';
         
         const isLastMsg: boolean = !Boolean((reply.triggers as BotActions.Trigger[]).length);
         const keyboard: ExtraReplyMessage = !isLastMsg ? this._buildKeyboardByList(reply.triggers as BotActions.Trigger[]) : {};

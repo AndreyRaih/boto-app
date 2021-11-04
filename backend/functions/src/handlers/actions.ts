@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import { v4 } from "uuid";
 
-export const createScenario = async (creatorId: string, label: string) => {
+export const createScenario = async (creatorId: string, label: string | null = null) => {
     const id = v4();
     const defaultScenario = {
         creatorId,
@@ -10,6 +10,7 @@ export const createScenario = async (creatorId: string, label: string) => {
         stages: []
     }
     await admin.firestore().collection('actions').doc(id).set(defaultScenario, { merge: true });
+    return id;
 };
 
 export const bindScenarioToBot = async (scenarioId: string, botId: string) => {
@@ -17,15 +18,7 @@ export const bindScenarioToBot = async (scenarioId: string, botId: string) => {
     await admin.firestore().collection('actions').doc(scenarioId).update({ bot: botId });
 };
 
-export const updateScenarioActions = async (scenarioId: string, stage: any) => {
-    const scenario = await (await admin.firestore().collection('actions').doc(scenarioId).get()).data() as any;
-    const stages = [...(scenario.stages as any[])];
-    if (stages.some(( { id }) => stage.id === id)) {
-        const pos = (scenario.stages as any[]).findIndex(( { id }) => stage.id === id)
-        stages[pos] = stage;
-    } else {
-        stages.push(stage);
-    }
+export const updateScenarioActions = async (scenarioId: string, stages: any) => {
     await admin.firestore().collection('actions').doc(scenarioId).update({ stages });
 };
 

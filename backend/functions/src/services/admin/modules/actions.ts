@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/scenario/create', async (req, res, next) => {
   const { name, creatorId } = req.body;
-
+  console.log('here')
   try {
     await createScenario(creatorId, name);
     res.sendStatus(200);
@@ -46,11 +46,11 @@ router.post('/scenario/:scenarioId/bind', async (req, res, next) => {
 
 router.post('/scenario/:scenarioId/update', async (req, res, next) => {
   const { scenarioId } = req.params;
-  const { stage } = req.body;
-  if (!scenarioId || !stage) res.status(400).send(new Error('[scenarioId], [stage] are required'));
+  const { stages } = req.body;
+  if (!scenarioId || !stages) res.status(400).send(new Error('[scenarioId], [stage] are required'));
 
   try {
-    await updateScenarioActions(scenarioId, (stage || null));
+    await updateScenarioActions(scenarioId, (stages || []));
     res.sendStatus(200);
   } catch (error) {
     console.log(error);
