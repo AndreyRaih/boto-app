@@ -1,5 +1,5 @@
 import * as express from 'express';
-import { bindScenarioToBot, createScenario, updateScenarioActions, getScenarioListById, deleteScenarioActions } from '../../../handlers/actions';
+import { createScenario, updateScenarioActions, getScenarioListById } from '../../../handlers/actions';
 
 const router = express.Router();
 
@@ -29,21 +29,6 @@ router.get('/scenario/list', async (req, res, next) => {
   next();
 });
 
-router.post('/scenario/:scenarioId/bind', async (req, res, next) => {
-  const { scenarioId } = req.params;
-  const { id } = req.body;
-  if (!scenarioId || !id) res.status(400).send(new Error('[id], [scenarioId] are required query params'));
-
-  try {
-    await bindScenarioToBot(scenarioId, id as string);
-    res.sendStatus(200);
-  } catch (error) {
-    console.log(error);
-    res.status(500).send(error);
-  }
-  next();
-});
-
 router.post('/scenario/:scenarioId/update', async (req, res, next) => {
   const { scenarioId } = req.params;
   const { stages } = req.body;
@@ -51,21 +36,6 @@ router.post('/scenario/:scenarioId/update', async (req, res, next) => {
 
   try {
     await updateScenarioActions(scenarioId, (stages || []));
-    res.sendStatus(200);
-  } catch (error) {
-    console.log(error);
-    res.status(500).send(error);
-  }
-  next();
-});
-
-router.post('/scenario/:scenarioId/delete_stage', async (req, res, next) => {
-  const { scenarioId } = req.params;
-  const { id } = req.body;
-  if (!scenarioId || !id) res.status(400).send(new Error('[scenarioId], [id] are required'));
-
-  try {
-    await deleteScenarioActions(scenarioId, id);
     res.sendStatus(200);
   } catch (error) {
     console.log(error);

@@ -5,7 +5,7 @@ import BotReplyBuilder from "../enitites/actions/replyBuilder";
 import BotoAnalyticObserver from "../enitites/analytic/observer";
 import BotData from "../enitites/bot/bot";
 import BotCreator from '../enitites/bot/creator';
-import { Bot } from "../types/bot";
+import { Bot } from "../../../types/bot";
 import { createScenario } from "./actions";
 import { createAnalyticSuite } from "./analytic";
 

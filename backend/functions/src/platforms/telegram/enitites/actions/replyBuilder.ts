@@ -2,7 +2,7 @@ import { _onRequestWithOptions } from "firebase-functions/lib/providers/https";
 import { Markup, Telegraf } from "telegraf";
 import { InlineKeyboardButton } from "telegraf/typings/core/types/typegram";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
-import { BotActions } from "../../types/action";
+import { BotActions } from "../../../../types/action";
 
 export default class BotReplyBuilder {
     bot: Telegraf
@@ -44,10 +44,10 @@ export default class BotReplyBuilder {
     }
 
     private _buildKeyboardByList(triggers: BotActions.Trigger[]): ExtraReplyMessage {
-        const inlineButtons: InlineKeyboardButton[] = triggers.map(trigger => ({
+        const inlineButtons: InlineKeyboardButton[][] = triggers.map(trigger => ([{
             text: trigger.text as string,
             callback_data: trigger.destinationId as string
-        }));
-        return { reply_markup: { ...Markup.inlineKeyboard([inlineButtons]).reply_markup } };
+        }]));
+        return { reply_markup: { ...Markup.inlineKeyboard(inlineButtons).reply_markup } };
     }
 }

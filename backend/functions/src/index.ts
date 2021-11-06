@@ -5,7 +5,7 @@ import * as admin from 'firebase-admin';
 import * as express from 'express';
 
 import { errorMiddleware, corsMiddleware } from './middlewares';
-import services from './services';
+import services from './platforms/telegram/services';
 
 admin.initializeApp()
 

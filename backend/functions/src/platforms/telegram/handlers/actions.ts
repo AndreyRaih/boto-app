@@ -13,19 +13,8 @@ export const createScenario = async (creatorId: string, label: string | null = n
     return id;
 };
 
-export const bindScenarioToBot = async (scenarioId: string, botId: string) => {
-    await admin.firestore().collection('bots').doc(botId).update({ activeScenario: scenarioId });
-    await admin.firestore().collection('actions').doc(scenarioId).update({ bot: botId });
-};
-
 export const updateScenarioActions = async (scenarioId: string, stages: any) => {
     await admin.firestore().collection('actions').doc(scenarioId).update({ stages });
-};
-
-export const deleteScenarioActions = async (scenarioId: string, stageId: any) => {
-    const scenario = await (await admin.firestore().collection('actions').doc(scenarioId).get()).data() as any;
-    const patchedStages = scenario.stages.filter(({ id }: any) => id !== stageId).map((stage: any) => ({...stage, triggers: stage.triggers.filter(({destinationId}: any) => destinationId !== stageId )}));
-    await admin.firestore().collection('actions').doc(scenarioId).update({ stages: patchedStages });
 };
 
 export const getScenarioListById = async (creatorId: string) => {

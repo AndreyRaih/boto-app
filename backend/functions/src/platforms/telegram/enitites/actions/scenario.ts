@@ -1,5 +1,5 @@
 import { Telegraf } from "telegraf";
-import { BotActions } from "../../types/action";
+import { BotActions } from "../../../../types/action";
 import { EVENT_MAP } from "../analytic/observer";
 import BotReplyBuilder from "./replyBuilder";
 

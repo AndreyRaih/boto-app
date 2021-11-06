@@ -6,7 +6,6 @@ const API_INTERACTION_URL: string = 'https://us-central1-botoapp.cloudfunctions.
 
 export default class BotCreator {
   token: string;
-  editToken: string | null;
   name: string;
   id: string;
   userId: string;
@@ -16,7 +15,6 @@ export default class BotCreator {
   constructor(userId: string, token: string, name: string, scenarioId: string) {
     this.userId = userId;
     this.token = token;
-    this.editToken = null;
     this.name = name;
     this.id = uuidv4();
     this.analyticId = uuidv4();
@@ -47,11 +45,8 @@ export default class BotCreator {
       creatorId: this.userId,
       token: this.token,
       name: this.name,
-      editToken: this.editToken,
       analyticId: this.analyticId,
       activeScenario: this.activeScenario,
-      admins: [],
-      subscribers: [],
       webhookUrl: this.webhookUrl
     };
     return admin.firestore().collection('bots').doc(this.id).set(data);
