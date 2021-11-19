@@ -5,7 +5,6 @@ const router = express.Router();
 
 router.post('/scenario/create', async (req, res, next) => {
   const { name, creatorId } = req.body;
-  console.log('here')
   try {
     await createScenario(creatorId, name);
     res.sendStatus(200);

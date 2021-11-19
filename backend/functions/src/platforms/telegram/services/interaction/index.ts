@@ -6,7 +6,6 @@ const router = express.Router();
 router.post('/reply/:id', async (req, res, next) => {
   const { id } = req.params;
   try {
-    console.log(id)
     await recieveMessageByBotId(id, req, res);
     res.sendStatus(200);
   } catch (error) {

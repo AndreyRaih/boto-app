@@ -62,7 +62,7 @@ export const sendMessageByChatId = async (data: any) => {
     const reciever = new BotData(from as string);
     await reciever.run();
     const replier = new BotReplyBuilder(reciever.telegrafInstance as Telegraf)
-    replier.replyByChatId(to, (message || ''))
+    replier.replyByChatId(to, (message || '...'))
 }
 
 export const recieveMessageByBotId = async (id: string, req: any, res: any) => {

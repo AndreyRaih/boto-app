@@ -7,9 +7,14 @@ export declare namespace BotActions {
         stages: BotActions.Stage[]
     }
 
+    type Media = {
+        type: 'video' | 'image', 
+        url: string
+    }
+
     type Stage = {
         id: string;
-        images: string[];
+        media: Media[];
         text: string;
         title?: string;
         event: BotActions.Event;

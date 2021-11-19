@@ -13,7 +13,7 @@ export default class BotReplyBuilder {
 
     async replyByChatId(chatId: string, reply: BotActions.Stage | string) {
         if (typeof reply === 'string') {
-            this.bot.telegram.sendMessage(chatId, reply);
+            this.bot.telegram.sendMessage(chatId, reply, {parse_mode: 'HTML'});
             return;
         }
 
@@ -24,15 +24,22 @@ export default class BotReplyBuilder {
 
         if (isLastMsg) reply.text = `${reply.text}\n\nДля возвращения к началу беседы отправьте команду: /start`
 
-        if (reply.images && reply.images.length) {
-            if (reply.images.length === 1) {
-                this.bot.telegram.sendPhoto(chatId, reply.images[0], {...keyboard, caption: reply.text });
+        if (reply.media && reply.media.length) {
+            if (reply.media.length === 1) {
+                const media = reply.media[0] as any;
+                if (media.type === 'image') {
+                    this.bot.telegram.sendPhoto(chatId, reply.media[0].url, {...keyboard, caption: reply.text });
+                } 
+                if (media.type === 'video') {
+                    this.bot.telegram.sendVideo(chatId, reply.media[0].url, {...keyboard, caption: reply.text });
+                }
             } else {
-                await this.bot.telegram.sendMediaGroup(chatId, reply.images.map(image => ({ type: 'photo', media: image })));
-                this.bot.telegram.sendMessage(chatId, reply.text, keyboard);
+                const media = reply.media.map(({ type, url }) => ({ type: type === 'image' ? 'photo' : 'video', media: url })) as any[];
+                await this.bot.telegram.sendMediaGroup(chatId, media);
+                this.bot.telegram.sendMessage(chatId, reply.text, {...keyboard, parse_mode: 'HTML' });
             }
         } else {
-            this.bot.telegram.sendMessage(chatId, reply.text, keyboard);
+            this.bot.telegram.sendMessage(chatId, reply.text, {...keyboard, parse_mode: 'HTML' });
         };
         return {
             date: Date.now(),
